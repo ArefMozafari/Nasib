@@ -1,0 +1,23 @@
+<Window x:Class="Nasib.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:app="clr-namespace:Nasib.App"
+        Title="Nasib"
+        Width="{x:Static app:DesignTokens.WindowWidth}"
+        SizeToContent="Height"
+        ResizeMode="CanMinimize"
+        WindowStartupLocation="CenterScreen">
+    <StackPanel Margin="{x:Static app:DesignTokens.WindowPadding}">
+        <TabControl x:Name="Tabs" SelectionChanged="OnTabSelectionChanged">
+            <TabItem Header="Status" />
+            <TabItem Header="Settings" />
+        </TabControl>
+
+        <!-- Both panels share one cell and the hidden one keeps its space, so the window takes the taller tab's
+             height and does not jump when switching. Both start at the top; the Status tab's output pane fills the rest. -->
+        <Grid Margin="{x:Static app:DesignTokens.SectionGap}">
+            <app:StatusPanel x:Name="StatusPanel" />
+            <app:SettingsPanel x:Name="SettingsPanel" VerticalAlignment="Top" Visibility="Hidden" />
+        </Grid>
+    </StackPanel>
+</Window>

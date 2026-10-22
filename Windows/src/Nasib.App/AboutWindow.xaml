@@ -1,0 +1,20 @@
+<Window x:Class="Nasib.App.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:app="clr-namespace:Nasib.App"
+        xmlns:drawing="clr-namespace:Nasib.App.Drawing"
+        Title="About Nasib"
+        Width="{x:Static app:DesignTokens.AboutWidth}"
+        SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen">
+    <StackPanel Margin="{x:Static app:DesignTokens.WindowPadding}" HorizontalAlignment="Center">
+        <Image Source="{x:Static drawing:AppIconDrawing.ImageSource}"
+               Width="{x:Static app:DesignTokens.AboutIconSize}"
+               Height="{x:Static app:DesignTokens.AboutIconSize}" />
+        <TextBlock Text="Nasib" Style="{StaticResource TitleText}" HorizontalAlignment="Center" Margin="{x:Static app:DesignTokens.RowGap}" />
+        <TextBlock x:Name="VersionText" HorizontalAlignment="Center" Margin="{x:Static app:DesignTokens.RowGap}" />
+        <TextBlock x:Name="CopyrightText" Style="{StaticResource CaptionText}" HorizontalAlignment="Center" Margin="{x:Static app:DesignTokens.RowGap}" />
+        <Button Content="OK" IsDefault="True" IsCancel="True" HorizontalAlignment="Center" Margin="{x:Static app:DesignTokens.SectionGap}" Click="OnOkClick" />
+    </StackPanel>
+</Window>

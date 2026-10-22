@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <!-- Windows Forms supplies the tray icon; the window and the tray menu are WPF. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>Nasib</AssemblyName>
+    <RootNamespace>Nasib.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- The Fluent theme's ThemeMode is marked experimental in .NET 9. -->
+    <NoWarn>$(NoWarn);WPF0001</NoWarn>
+    <GeneratedApplicationIcon>$(MSBuildProjectDirectory)\obj\Generated\Nasib.ico</GeneratedApplicationIcon>
+    <ApplicationIcon>$(GeneratedApplicationIcon)</ApplicationIcon>
+    <IconBuilderProject>$(MSBuildProjectDirectory)\..\..\tools\Nasib.IconBuilder\Nasib.IconBuilder.csproj</IconBuilderProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Nasib.Engine\Nasib.Engine.csproj" />
+    <!-- Built first so its output can draw the .exe icon; nothing from it ships. -->
+    <ProjectReference Include="$(IconBuilderProject)"
+                      ReferenceOutputAssembly="false"
+                      Private="false"
+                      GlobalPropertiesToRemove="RuntimeIdentifier;SelfContained;PublishSingleFile" />
+  </ItemGroup>
+
+  <!-- Draws the .exe icon from the same vector paths the app uses at run time, so no bitmap is kept by hand. -->
+  <Target Name="GenerateApplicationIcon"
+          BeforeTargets="CoreCompile;PrepareResources"
+          Inputs="Drawing\AppIconDrawing.cs"
+          Outputs="$(GeneratedApplicationIcon)">
+    <MSBuild Projects="$(IconBuilderProject)"
+             Targets="GetTargetPath"
+             RemoveProperties="RuntimeIdentifier;SelfContained;PublishSingleFile">
+      <Output TaskParameter="TargetOutputs" PropertyName="IconBuilderAssembly" />
+    </MSBuild>
+    <Exec Command="dotnet &quot;$(IconBuilderAssembly)&quot; &quot;$(GeneratedApplicationIcon)&quot;" />
+  </Target>
+
+</Project>
