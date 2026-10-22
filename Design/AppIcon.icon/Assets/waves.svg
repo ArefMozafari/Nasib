@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Each wave spans x 216..808 (center 512); the three sit at y 372/512/652 (center 512). -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="72" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M216 372 C 315 310, 413 310, 512 372 S 709 434, 808 372"/>
+    <path d="M216 512 C 315 450, 413 450, 512 512 S 709 574, 808 512"/>
+    <path d="M216 652 C 315 590, 413 590, 512 652 S 709 714, 808 652"/>
+  </g>
+</svg>
