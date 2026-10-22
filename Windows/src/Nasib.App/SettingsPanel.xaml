@@ -1,0 +1,67 @@
+<UserControl x:Class="Nasib.App.SettingsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:app="clr-namespace:Nasib.App">
+    <StackPanel>
+        <TextBlock Text="Cities to search" Style="{StaticResource HeadingText}" />
+        <TextBlock Text="One per line, as Windscribe names them. Leave empty to search every city."
+                   Style="{StaticResource CaptionText}"
+                   Margin="{x:Static app:DesignTokens.RowGap}" />
+        <TextBox Text="{Binding CitiesText, UpdateSourceTrigger=PropertyChanged}"
+                 AcceptsReturn="True"
+                 TextWrapping="NoWrap"
+                 VerticalScrollBarVisibility="Auto"
+                 FontFamily="{x:Static app:DesignTokens.MonospaceFontFamily}"
+                 Height="{x:Static app:DesignTokens.CitiesEditorHeight}"
+                 VerticalContentAlignment="Top"
+                 Margin="{x:Static app:DesignTokens.RowGap}"
+                 AutomationProperties.Name="Cities to search" />
+
+        <TextBlock Text="Protocols, in the order to try"
+                   Style="{StaticResource HeadingText}"
+                   Margin="{x:Static app:DesignTokens.SectionGap}" />
+        <TextBlock Text="Use the arrows to reorder. Unchecked protocols are never tried."
+                   Style="{StaticResource CaptionText}"
+                   Margin="{x:Static app:DesignTokens.RowGap}" />
+        <Border Margin="{x:Static app:DesignTokens.RowGap}"
+                BorderThickness="{x:Static app:DesignTokens.HairlineThickness}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                CornerRadius="{x:Static app:DesignTokens.ControlCornerRadius}"
+                Padding="{x:Static app:DesignTokens.CompactRowPadding}">
+            <ItemsControl ItemsSource="{Binding ProtocolRows}" AutomationProperties.Name="Protocols, in the order to try">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <!-- Segoe Fluent Icons ships with Windows 11; Segoe MDL2 Assets has the same glyphs on Windows 10. -->
+                        <DockPanel Margin="{x:Static app:DesignTokens.ProtocolRowMargin}">
+                            <Button DockPanel.Dock="Right"
+                                    Content="&#xE70D;"
+                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                    Width="{x:Static app:DesignTokens.ReorderButtonWidth}"
+                                    Margin="{x:Static app:DesignTokens.InlineGap}"
+                                    Tag="{Binding}"
+                                    ToolTip="Move down"
+                                    AutomationProperties.Name="{Binding Name, StringFormat=Move {0} down}"
+                                    Click="OnMoveDownClick" />
+                            <Button DockPanel.Dock="Right"
+                                    Content="&#xE70E;"
+                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                    Width="{x:Static app:DesignTokens.ReorderButtonWidth}"
+                                    Tag="{Binding}"
+                                    ToolTip="Move up"
+                                    AutomationProperties.Name="{Binding Name, StringFormat=Move {0} up}"
+                                    Click="OnMoveUpClick" />
+                            <CheckBox Content="{Binding Name}" IsChecked="{Binding Enabled}" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Border>
+
+        <DockPanel Margin="{x:Static app:DesignTokens.SectionGap}">
+            <Button Content="Reset to Defaults" Click="OnResetClick" />
+            <Button Content="Save" IsDefault="True" HorizontalAlignment="Right" Style="{DynamicResource AccentButtonStyle}" Click="OnSaveClick" />
+        </DockPanel>
+        <TextBlock Text="{Binding Message}" Style="{StaticResource CaptionText}" Margin="{x:Static app:DesignTokens.RowGap}" />
+    </StackPanel>
+</UserControl>
