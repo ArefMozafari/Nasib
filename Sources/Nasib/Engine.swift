@@ -10,8 +10,8 @@ final class Engine: ObservableObject {
         case connected(location: String, protocolName: String)
     }
 
-    static let stateDirectory = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ws-find")
-    static let logFile = stateDirectory.appendingPathComponent("log.csv")
+    nonisolated static let stateDirectory = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ws-find")
+    nonisolated static let logFile = stateDirectory.appendingPathComponent("log.csv")
 
     private static let scriptName = "ws-find"
     private static let scriptExtension = "sh"
@@ -23,6 +23,14 @@ final class Engine: ObservableObject {
     private static let autoReconnectKey = "autoReconnect"
     private static let surveyArgument = "--survey"
     private static let watchArgument = "--watch"
+    // Tells the script to skip its own osascript notifications; the app posts them from the parsed lines.
+    private static let scriptNotifyVariable = "NASIB_NOTIFY"
+    private static let scriptNotifyDisabled = "0"
+    private static let connectedNotificationTitle = "Connected"
+    private static let nothingWorkedNotificationTitle = "No working server"
+    private static let nothingWorkedNotificationBody = "Every datacenter and protocol failed."
+    private static let tunnelDownNotificationTitle = "Tunnel down"
+    private static let tunnelDownNotificationBody = "Searching for a working server…"
 
     @Published private(set) var state: State = .unknown
     @Published private(set) var isBusy = false
@@ -39,6 +47,7 @@ final class Engine: ObservableObject {
     init() {
         autoReconnect = UserDefaults.standard.object(forKey: Self.autoReconnectKey) as? Bool ?? true
         engineMissing = Self.scriptURL == nil
+        Notifier.requestPermission()
         startWatchTimer()
         refreshStatus()
     }
@@ -61,8 +70,13 @@ final class Engine: ObservableObject {
             state = .searching(location: location, protocolName: protocolName)
         case let .connected(location, protocolName):
             state = .connected(location: location, protocolName: protocolName)
+            Notifier.post(title: Self.connectedNotificationTitle, body: "\(location) / \(protocolName)")
         case .nothingWorked:
             state = .down
+            Notifier.post(title: Self.nothingWorkedNotificationTitle, body: Self.nothingWorkedNotificationBody)
+        case .tunnelDown:
+            state = .down
+            Notifier.post(title: Self.tunnelDownNotificationTitle, body: Self.tunnelDownNotificationBody)
         case .surveyFinished, .other:
             break
         }
@@ -81,7 +95,11 @@ final class Engine: ObservableObject {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: Self.shellPath)
         process.arguments = [scriptURL.path] + arguments
-        process.environment = ["PATH": Self.processPath, "HOME": FileManager.default.homeDirectoryForCurrentUser.path]
+        process.environment = [
+            "PATH": Self.processPath,
+            "HOME": FileManager.default.homeDirectoryForCurrentUser.path,
+            Self.scriptNotifyVariable: Self.scriptNotifyDisabled,
+        ]
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = pipe

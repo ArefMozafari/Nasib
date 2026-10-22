@@ -6,6 +6,7 @@ enum EngineEvent: Equatable {
     case connected(location: String, protocolName: String)
     case nothingWorked
     case surveyFinished
+    case tunnelDown
     case other(String)
 }
 
@@ -20,6 +21,7 @@ enum EngineOutputParser {
     private static let connectedPrefix = "connected: "
     private static let nothingWorkedLine = "nothing worked"
     private static let surveyFinishedLine = "survey finished"
+    private static let tunnelDownLine = "tunnel down"
     private static let pairSeparator = " / "
     private static let connectedStatePrefix = "Connect state: Connected: "
     private static let protocolPrefix = "Protocol: "
@@ -40,6 +42,7 @@ enum EngineOutputParser {
         }
         if line == nothingWorkedLine { return .nothingWorked }
         if line == surveyFinishedLine { return .surveyFinished }
+        if line == tunnelDownLine { return .tunnelDown }
         return .other(line)
     }
 

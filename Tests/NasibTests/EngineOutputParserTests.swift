@@ -24,6 +24,10 @@ final class EngineOutputParserTests: XCTestCase {
         XCTAssertEqual(EngineOutputParser.parse(line: "survey finished"), .surveyFinished)
     }
 
+    func testShouldParseTunnelDownLine() {
+        XCTAssertEqual(EngineOutputParser.parse(line: "tunnel down"), .tunnelDown)
+    }
+
     func testShouldTreatUnknownLineAsOther() {
         XCTAssertEqual(
             EngineOutputParser.parse(line: "protocol order: ikev2, wireguard"),
