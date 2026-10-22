@@ -8,6 +8,8 @@ enum Layout {
     static let padding: CGFloat = 20
     static let statusDotSize: CGFloat = 10
     static let logHeight: CGFloat = 140
+    static let citiesEditorHeight: CGFloat = 120
+    static let protocolListHeight: CGFloat = 190
 }
 
 extension Engine.State {
@@ -125,7 +127,7 @@ struct RecentOutput: View {
     }
 }
 
-struct ContentView: View {
+struct StatusTab: View {
     @EnvironmentObject private var engine: Engine
 
     var body: some View {
@@ -139,6 +141,19 @@ struct ContentView: View {
             SettingsRows()
             Divider()
             RecentOutput()
+        }
+    }
+}
+
+struct ContentView: View {
+    var body: some View {
+        TabView {
+            StatusTab()
+                .padding(Layout.padding)
+                .tabItem { Text("Status") }
+            SettingsView()
+                .padding(Layout.padding)
+                .tabItem { Text("Settings") }
         }
         .padding(Layout.padding)
         .frame(width: Layout.windowWidth)
