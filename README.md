@@ -71,7 +71,7 @@ area without the window, from wherever `Nasib.exe` was when you turned it on.
 <p align="center">
   <img src="docs/images/windows-status.png" width="320" alt="Windows Status tab: the current server, Find Now, Start Survey and Show Log, the two toggles, and the engine's output">
   <img src="docs/images/windows-settings.png" width="320" alt="Windows Settings tab: cities to search, and protocols in the order to try with arrows to reorder them">
-  <img src="docs/images/windows-tray-menu.png" width="200" alt="Windows tray menu: Nasib, the status line, Open Nasib, Find Now, About Nasib and Quit Nasib">
+  <img src="docs/images/windows-tray-menu.png" width="166" alt="Windows tray menu: Nasib, the status line, Open Nasib, Find Now, About Nasib and Quit Nasib">
 </p>
 
 ### Set Windscribe's anti-censorship options yourself
