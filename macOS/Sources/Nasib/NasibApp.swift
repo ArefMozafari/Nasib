@@ -6,16 +6,17 @@ struct NasibApp: App {
 
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var engine = Engine()
+    @StateObject private var updateChecker = UpdateChecker()
 
     var body: some Scene {
         Window("Nasib", id: Self.mainWindowIdentifier) {
-            ContentView().environmentObject(engine)
+            ContentView().environmentObject(engine).environmentObject(updateChecker)
         }
         .windowResizability(.contentSize)
         .defaultLaunchBehavior(.suppressed)
 
         MenuBarExtra {
-            MenuBarMenu().environmentObject(engine)
+            MenuBarMenu().environmentObject(engine).environmentObject(updateChecker)
         } label: {
             Image(nsImage: MenuBarGlyph.image(named: engine.state.glyphName))
         }
