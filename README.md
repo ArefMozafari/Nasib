@@ -105,3 +105,7 @@ Liquid Glass, and one SVG per menu bar state. `build.sh` compiles them; no PNG i
   check and keeps auto-reconnect searching underneath it. Tracked in
   [#4](https://github.com/ArefMozafari/Nasib/issues/4).
 - Builds are signed ad hoc, not notarized.
+
+## License
+
+[MIT](LICENSE). Nasib isn't affiliated with Windscribe.
