@@ -10,6 +10,19 @@ enum Layout {
     static let logHeight: CGFloat = 140
     static let citiesEditorHeight: CGFloat = 120
     static let protocolListHeight: CGFloat = 190
+    static let headerIconSize: CGFloat = 32
+    static let menuIconSize: CGFloat = 16
+}
+
+/// App name and icon at the top of the Status tab.
+struct AppHeader: View {
+    var body: some View {
+        HStack(spacing: Layout.rowSpacing) {
+            Image(nsImage: AppIcon.image(points: Layout.headerIconSize))
+            Text("Nasib").font(.title2.bold())
+        }
+        .accessibilityElement(children: .combine)
+    }
 }
 
 extension Engine.State {
@@ -132,6 +145,7 @@ struct StatusTab: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Layout.sectionSpacing) {
+            AppHeader()
             StatusHeader()
             if engine.engineMissing {
                 Text("Engine script missing from the app bundle.").foregroundStyle(.red)
@@ -167,16 +181,23 @@ struct MenuBarMenu: View {
     @EnvironmentObject private var engine: Engine
     @Environment(\.openWindow) private var openWindow
 
+    private func openMainWindow() {
+        openWindow(id: NasibApp.mainWindowIdentifier)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
     var body: some View {
+        // The header row also opens the window, so it reads as an enabled item rather than a greyed-out label.
+        Button { openMainWindow() } label: {
+            Label { Text("Nasib") } icon: { Image(nsImage: AppIcon.image(points: Layout.menuIconSize)) }
+        }
         Text(engine.state.title)
         Divider()
-        Button("Open Nasib") {
-            openWindow(id: NasibApp.mainWindowIdentifier)
-            NSApp.activate(ignoringOtherApps: true)
-        }
+        Button("Open Nasib") { openMainWindow() }
         Button("Find Now") { engine.findNow() }
             .disabled(engine.isBusy)
         Divider()
+        Button("About Nasib") { AppIcon.showAboutPanel() }
         Button("Quit Nasib") { NSApp.terminate(nil) }
     }
 }
