@@ -26,12 +26,15 @@ build without installing. `swift test` runs the unit tests.
 
 ## Using it
 
-The menu bar icon shows the state: shield with a check when connected, arrows while searching, a
-crossed shield when down. The window has Find Now, Start/Stop Survey (tests every combination and
-records each result without stopping), Show Log, and toggles for auto-reconnect and launch at login.
-Closing the window keeps the app in the menu bar; quit from there.
+The menu bar icon shows the state: solid waves when connected, dashed while searching, slashed when
+down. The Status tab has Find Now, Start/Stop Survey (tests every combination and records each result
+without stopping), Show Log, and toggles for auto-reconnect and launch at login. Closing the window
+keeps the app in the menu bar; quit from there. The app posts a notification on every switch, when a
+search finds nothing, and when the watcher sees the tunnel down.
 
-Cities to search are the `CITIES` list in `Engine/ws-find.sh`.
+The Settings tab edits which cities to search and which protocols to try, in order. Saving writes
+`~/.ws-find/config`, which the engine sources on every run; without that file the engine uses the
+defaults in `Engine/ws-find.sh`.
 
 ## Icons
 
