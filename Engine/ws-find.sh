@@ -37,13 +37,17 @@ REACH_TIMEOUT_SECONDS=2
 RANK_WINDOW_LINES=300
 LOG_LOCATION_COLUMN=2
 LOG_PROTOCOL_COLUMN=3
-# The protocols that usually work here are tried across every location before the fallbacks.
-PRIMARY_PROTOCOLS=(wireguard ikev2 tcp)
-FALLBACK_PROTOCOLS=(stealth wstunnel udp)
+# Protocols in the order to try them; ranking only reorders this by recent success rate.
+PROTOCOL_ORDER=(wireguard ikev2 tcp stealth wstunnel udp)
+# The Nasib app writes CITIES and PROTOCOL_ORDER overrides here from its Settings tab.
+CONFIG_FILE="$STATE_DIR/config"
+[[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE"
 
 mkdir -p "$STATE_DIR"
 
 notify() {
+  # The Nasib app posts its own notifications from the printed lines and sets NASIB_NOTIFY=0.
+  [[ "${NASIB_NOTIFY:-1}" == "0" ]] && return 0
   osascript -e "display notification \"$1\" with title \"Windscribe\"" >/dev/null 2>&1
 }
 
@@ -169,7 +173,7 @@ search() {
     candidates=("${LOCATIONS[@]}")
   fi
   candidates=("${(@f)$(rank_by_success "$LOG_LOCATION_COLUMN" "${candidates[@]}")}")
-  protocols=("${(@f)$(rank_by_success "$LOG_PROTOCOL_COLUMN" "${PRIMARY_PROTOCOLS[@]}" "${FALLBACK_PROTOCOLS[@]}")}")
+  protocols=("${(@f)$(rank_by_success "$LOG_PROTOCOL_COLUMN" "${PROTOCOL_ORDER[@]}")}")
   echo "protocol order: ${(j:, :)protocols}"
   echo "location order: ${(j:, :)candidates}"
   local location protocol
@@ -201,7 +205,7 @@ case "${1:-}" in
     reachable_locations
     exit 0 ;;
   --rank)
-    echo "protocols:"; rank_by_success "$LOG_PROTOCOL_COLUMN" "${PRIMARY_PROTOCOLS[@]}" "${FALLBACK_PROTOCOLS[@]}"
+    echo "protocols:"; rank_by_success "$LOG_PROTOCOL_COLUMN" "${PROTOCOL_ORDER[@]}"
     echo "locations:"; rank_by_success "$LOG_LOCATION_COLUMN" "${LOCATIONS[@]}"
     exit 0 ;;
 esac
@@ -213,6 +217,7 @@ trap 'rmdir "$LOCK_DIR" 2>/dev/null' EXIT
 case "${1:-}" in
   --watch)
     tunnel_works && exit 0
+    echo "tunnel down"
     notify "Tunnel down, searching..."
     search ;;
   --survey)
