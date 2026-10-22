@@ -26,21 +26,27 @@ public class SuccessRankerTests
         [Fact(DisplayName = "should keep the given order for ties and names never tried")]
         public void ShouldKeepTheGivenOrderForTiesAndNamesNeverTried()
         {
-            var attempts = new[] { Attempt("Lygos", "tcp", false), Attempt("Lygos", "udp", false) };
+            var attempts = new[] { Attempt("Fika", "tcp", false), Attempt("Lygos", "udp", false) };
 
-            var ranked = SuccessRanker.Rank(["wireguard", "ikev2", "tcp", "udp"], attempts, attempt => attempt.Protocol);
+            var ranked = SuccessRanker.Rank(["Khalifa", "Lygos", "Vitoshka", "Fika"], attempts, attempt => attempt.Nickname);
 
-            Assert.Equal(["wireguard", "ikev2", "tcp", "udp"], ranked);
+            Assert.Equal(["Khalifa", "Lygos", "Vitoshka", "Fika"], ranked);
         }
 
-        [Fact(DisplayName = "should rank by protocol when given the protocol key")]
-        public void ShouldRankByProtocolWhenGivenTheProtocolKey()
+        [Fact(DisplayName = "should count every protocol tried on a datacenter towards its rate")]
+        public void ShouldCountEveryProtocolTriedOnADatacenterTowardsItsRate()
         {
-            var attempts = new[] { Attempt("Lygos", "wstunnel", true), Attempt("Khalifa", "wireguard", false) };
+            var attempts = new[]
+            {
+                Attempt("Lygos", "wstunnel", true),
+                Attempt("Lygos", "wireguard", true),
+                Attempt("Khalifa", "wireguard", true),
+                Attempt("Khalifa", "ikev2", false),
+            };
 
-            var ranked = SuccessRanker.Rank(["wireguard", "ikev2", "wstunnel"], attempts, attempt => attempt.Protocol);
+            var ranked = SuccessRanker.Rank(["Khalifa", "Lygos"], attempts, attempt => attempt.Nickname);
 
-            Assert.Equal(["wstunnel", "wireguard", "ikev2"], ranked);
+            Assert.Equal(["Lygos", "Khalifa"], ranked);
         }
     }
 }

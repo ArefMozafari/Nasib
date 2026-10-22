@@ -38,8 +38,8 @@ public sealed class ServerFinder
     public event Action<EngineEvent>? EventRaised;
 
     /// <summary>
-    /// Tries the last pair that worked, then every reachable datacenter by rank on every protocol by rank,
-    /// and stops at the first pair that carries traffic. Returns whether one did.
+    /// Tries the last pair that worked, then every reachable datacenter by rank on each protocol in the
+    /// order set in Settings, and stops at the first pair that carries traffic. Returns whether one did.
     /// Cancelling it abandons the current attempt and leaves the tunnel down.
     /// </summary>
     public Task<bool> FindAsync(CancellationToken cancellationToken = default)
@@ -145,9 +145,11 @@ public sealed class ServerFinder
 
         var recentAttempts = attemptLog.ReadRecent(SuccessRanker.RankWindowLines);
         var nicknames = SuccessRanker.Rank(candidates.Select(datacenter => datacenter.Nickname), recentAttempts, attempt => attempt.Nickname);
-        var protocols = SuccessRanker.Rank(scope.Configuration.ProtocolOrder, recentAttempts, attempt => attempt.Protocol);
-        Raise(new MessageEvent("protocol order: " + string.Join(ListSeparator, protocols)));
-        Raise(new MessageEvent("location order: " + string.Join(ListSeparator, nicknames)));
+
+        // Protocols go in the order the user set in Settings; only datacenters are ranked by recent success.
+        var protocols = scope.Configuration.ProtocolOrder;
+        Raise(new MessageEvent("protocol order (from Settings): " + string.Join(ListSeparator, protocols)));
+        Raise(new MessageEvent("location order (by recent success): " + string.Join(ListSeparator, nicknames)));
 
         foreach (var protocol in protocols)
         {

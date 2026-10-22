@@ -115,8 +115,23 @@ public class ServerFinderTests
 
             await harness.Finder.FindAsync();
 
-            Assert.Contains(harness.Events, engineEvent => engineEvent.Text == "location order: Khalifa, Vitoshka");
+            Assert.Contains(harness.Events, engineEvent => engineEvent.Text == "location order (by recent success): Khalifa, Vitoshka");
             Assert.Equal(new TryingEvent("Khalifa", "ikev2"), harness.Events.OfType<TryingEvent>().First());
+        }
+
+        [Fact(DisplayName = "should try protocols in the order set in Settings, whatever worked recently")]
+        public async Task ShouldTryProtocolsInTheOrderSetInSettingsWhateverWorkedRecently()
+        {
+            using var harness = new EngineHarness();
+            harness.AttemptLog.Record("Khalifa", "wireguard", succeeded: true);
+            harness.AttemptLog.Record("Khalifa", "wireguard", succeeded: true);
+            harness.SaveConfiguration(new EngineConfiguration([EngineHarness.City], ["ikev2", "wireguard"]));
+
+            await harness.Finder.FindAsync();
+
+            Assert.Equal(("Khalifa", "ikev2"), harness.Cli.ConnectCalls[0]);
+            Assert.Contains(harness.Events, engineEvent => engineEvent.Text == "protocol order (from Settings): ikev2, wireguard");
+            Assert.Contains(harness.Events, engineEvent => engineEvent.Text == "location order (by recent success): Khalifa");
         }
 
         [Fact(DisplayName = "should refuse to start while another search is running")]

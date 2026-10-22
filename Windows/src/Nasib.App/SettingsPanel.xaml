@@ -20,7 +20,7 @@
         <TextBlock Text="Protocols, in the order to try"
                    Style="{StaticResource HeadingText}"
                    Margin="{x:Static app:DesignTokens.SectionGap}" />
-        <TextBlock Text="Use the arrows to reorder. Unchecked protocols are never tried."
+        <TextBlock Text="Tried in exactly this order. Use the arrows to reorder; unchecked protocols are never tried."
                    Style="{StaticResource CaptionText}"
                    Margin="{x:Static app:DesignTokens.RowGap}" />
         <Border Margin="{x:Static app:DesignTokens.RowGap}"

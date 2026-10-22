@@ -1,7 +1,8 @@
 namespace Nasib.Engine;
 
 /// <summary>
-/// Orders datacenters or protocols by how often they worked recently, so the order follows current censorship.
+/// Orders datacenters by how often they worked recently, so the search follows what the network allows now.
+/// Protocols are not ranked; they keep the order set in Settings.
 /// </summary>
 public static class SuccessRanker
 {

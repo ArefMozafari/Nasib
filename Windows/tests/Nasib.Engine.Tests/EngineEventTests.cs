@@ -14,7 +14,7 @@ public class EngineEventTests
             { new TunnelDownEvent(), "tunnel down" },
             { new SurveyFinishedEvent(), "survey finished" },
             { new SurveyStoppedEvent(), "survey stopped" },
-            { new MessageEvent("protocol order: ikev2, tcp"), "protocol order: ikev2, tcp" },
+            { new MessageEvent("protocol order (from Settings): ikev2, tcp"), "protocol order (from Settings): ikev2, tcp" },
         };
 
         [Theory(DisplayName = "should print the same line as the macOS engine")]
