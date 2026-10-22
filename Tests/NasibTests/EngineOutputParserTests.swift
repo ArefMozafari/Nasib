@@ -48,7 +48,7 @@ final class EngineOutputParserTests: XCTestCase {
         XCTAssertEqual(EngineEvent.searchStopped.tone, .accent)
         XCTAssertEqual(EngineEvent.surveyStopped.tone, .accent)
         XCTAssertEqual(EngineEvent.surveyFinished.tone, .accent)
-        XCTAssertEqual(EngineEvent.other("protocol order: tcp").tone, .detail)
+        XCTAssertEqual(EngineEvent.other("protocol order (from Settings): tcp").tone, .detail)
     }
 
     func testShouldParseTunnelDownLine() {
@@ -57,8 +57,8 @@ final class EngineOutputParserTests: XCTestCase {
 
     func testShouldTreatUnknownLineAsOther() {
         XCTAssertEqual(
-            EngineOutputParser.parse(line: "protocol order: ikev2, wireguard"),
-            .other("protocol order: ikev2, wireguard")
+            EngineOutputParser.parse(line: "protocol order (from Settings): ikev2, wireguard"),
+            .other("protocol order (from Settings): ikev2, wireguard")
         )
     }
 

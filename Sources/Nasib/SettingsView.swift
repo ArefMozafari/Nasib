@@ -64,7 +64,7 @@ struct SettingsView: View {
             }
             VStack(alignment: .leading, spacing: Layout.rowSpacing) {
                 Text("Protocols, in the order to try").font(.headline)
-                Text("Drag to reorder. Unchecked protocols are never tried.")
+                Text("Tried in exactly this order. Drag to reorder; unchecked protocols are never tried.")
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 List {

@@ -5,7 +5,7 @@
 #   ws-find.sh --locations print the datacenters and addresses read from the app's log
 #   ws-find.sh --reach  only print which datacenters answer right now
 #   ws-find.sh --survey test every combo, log each result, never stop early; Ctrl-C reconnects the last good one
-#   ws-find.sh --rank   print protocols and datacenters ordered by recent success rate
+#   ws-find.sh --rank   print the protocol order, and datacenters ordered by recent success rate
 set -u
 
 STATE_DIR="$HOME/.ws-find"
@@ -40,8 +40,7 @@ REACH_TIMEOUT_SECONDS=2
 # Success rates come from the most recent log lines only, so the order follows current censorship, not history.
 RANK_WINDOW_LINES=300
 LOG_LOCATION_COLUMN=2
-LOG_PROTOCOL_COLUMN=3
-# Protocols in the order to try them; ranking only reorders this by recent success rate.
+# Protocols are tried strictly in this order, which Settings can override; only datacenters are ranked.
 PROTOCOL_ORDER=(wireguard ikev2 tcp stealth wstunnel udp)
 # The Nasib app writes CITIES and PROTOCOL_ORDER overrides here from its Settings tab.
 CONFIG_FILE="$STATE_DIR/config"
@@ -187,9 +186,9 @@ search() {
     candidates=("${LOCATIONS[@]}")
   fi
   candidates=("${(@f)$(rank_by_success "$LOG_LOCATION_COLUMN" "${candidates[@]}")}")
-  protocols=("${(@f)$(rank_by_success "$LOG_PROTOCOL_COLUMN" "${PROTOCOL_ORDER[@]}")}")
-  echo "protocol order: ${(j:, :)protocols}"
-  echo "location order: ${(j:, :)candidates}"
+  protocols=("${PROTOCOL_ORDER[@]}")
+  echo "protocol order (from Settings): ${(j:, :)protocols}"
+  echo "location order (by recent success): ${(j:, :)candidates}"
   local location protocol
   for protocol in "${protocols[@]}"; do
     for location in "${candidates[@]}"; do
@@ -219,8 +218,8 @@ case "${1:-}" in
     reachable_locations
     exit 0 ;;
   --rank)
-    echo "protocols:"; rank_by_success "$LOG_PROTOCOL_COLUMN" "${PROTOCOL_ORDER[@]}"
-    echo "locations:"; rank_by_success "$LOG_LOCATION_COLUMN" "${LOCATIONS[@]}"
+    echo "protocols (from Settings):"; print -l -- "${PROTOCOL_ORDER[@]}"
+    echo "locations (by recent success):"; rank_by_success "$LOG_LOCATION_COLUMN" "${LOCATIONS[@]}"
     exit 0 ;;
 esac
 

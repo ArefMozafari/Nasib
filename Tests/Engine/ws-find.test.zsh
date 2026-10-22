@@ -139,8 +139,27 @@ should_stop_a_find_promptly_when_interrupted() {
   rm -rf "$sandbox"
 }
 
+# Protocols follow the order saved in Settings even when another protocol has the better record.
+should_try_protocols_in_the_configured_order() {
+  local sandbox
+  sandbox=$(make_sandbox)
+  print disconnected >"$sandbox/state"
+  print "CITIES=('Dubai')\nPROTOCOL_ORDER=(ikev2 wireguard)" >"$sandbox/home/.ws-find/config"
+  print "2026-01-01T00:00:00,$NICKNAME,wireguard,ok\n2026-01-01T00:01:00,$NICKNAME,wireguard,ok" \
+    >"$sandbox/home/.ws-find/log.csv"
+  run_engine "$sandbox"
+  expect_equal "an untried protocol listed first is tried before one with successes" \
+    "connect -n $NICKNAME ikev2" "$(head -1 "$sandbox/connect_calls")"
+  expect_equal "the output says the protocol order comes from Settings" \
+    "protocol order (from Settings): ikev2, wireguard" "$(grep '^protocol order' "$sandbox/output")"
+  expect_equal "the output says the location order comes from recent success" \
+    "location order (by recent success): $NICKNAME" "$(grep '^location order' "$sandbox/output")"
+  rm -rf "$sandbox"
+}
+
 should_log_one_attempt_when_searching_while_connected
 should_log_one_attempt_when_searching_while_disconnected
+should_try_protocols_in_the_configured_order
 should_print_failed_line_when_an_attempt_fails
 should_stop_a_find_promptly_when_interrupted
 (( failures == 0 )) && print "all passed" || { print "$failures failed"; exit 1; }
