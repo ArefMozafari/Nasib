@@ -11,6 +11,8 @@ INSTALL_DIR="$HOME/Applications"
 RELEASE_PLATFORM_SUFFIX="macos"
 
 ICON_WORK_DIR="$BUILD_DIR/icons"
+# Icon sources are shared with the Windows app, so they live at the repository root.
+DESIGN_DIR="../Design"
 APP_ICON_NAME="AppIcon"
 MINIMUM_SYSTEM_VERSION="15.0"
 MENU_BAR_GLYPHS=(MenuBarConnected MenuBarSearching MenuBarDown)
@@ -30,13 +32,13 @@ render_icons() {
   # actool resolves relative paths against the PWD variable, not the real working directory, so pass absolute ones.
   local project_dir
   project_dir="$(pwd -P)"
-  actool "$project_dir/Design/$APP_ICON_NAME.icon" --compile "$project_dir/$resources" --app-icon "$APP_ICON_NAME" \
+  actool "$project_dir/$DESIGN_DIR/$APP_ICON_NAME.icon" --compile "$project_dir/$resources" --app-icon "$APP_ICON_NAME" \
     --include-all-app-icons --platform macosx --minimum-deployment-target "$MINIMUM_SYSTEM_VERSION" \
     --output-partial-info-plist "$project_dir/$ICON_WORK_DIR/icon.plist" >/dev/null
   local glyph
   for glyph in "${MENU_BAR_GLYPHS[@]}"; do
-    render_svg "Design/$glyph.svg" "$resources/$glyph.png" "$MENU_BAR_GLYPH_POINTS"
-    render_svg "Design/$glyph.svg" "$resources/$glyph@2x.png" $(( MENU_BAR_GLYPH_POINTS * 2 ))
+    render_svg "$DESIGN_DIR/$glyph.svg" "$resources/$glyph.png" "$MENU_BAR_GLYPH_POINTS"
+    render_svg "$DESIGN_DIR/$glyph.svg" "$resources/$glyph@2x.png" $(( MENU_BAR_GLYPH_POINTS * 2 ))
   done
 }
 

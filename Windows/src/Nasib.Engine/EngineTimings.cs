@@ -1,7 +1,7 @@
 namespace Nasib.Engine;
 
 /// <summary>
-/// How long the engine waits at each step. The defaults match Engine/ws-find.sh on macOS.
+/// How long the engine waits at each step. The defaults match macOS/Engine/ws-find.sh.
 /// </summary>
 public sealed record EngineTimings
 {
