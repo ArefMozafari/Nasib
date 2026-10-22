@@ -19,6 +19,8 @@ final class Engine: ObservableObject {
     private nonisolated static let windscribeCliPath = "/usr/local/bin/windscribe-cli"
     private static let processPath = "/usr/local/bin:/usr/bin:/bin"
     private static let watchInterval: TimeInterval = 60
+    /// Reading the CLI status costs no traffic, so it runs far more often than the blocked-site check.
+    nonisolated static let statusInterval: TimeInterval = 3
     private static let recentLineLimit = 200
     private static let autoReconnectKey = "autoReconnect"
     private static let surveyArgument = "--survey"
@@ -46,12 +48,14 @@ final class Engine: ObservableObject {
 
     private var process: Process?
     private var watchTimer: Timer?
+    private var statusTimer: Timer?
+    private var isRefreshing = false
 
     init() {
         autoReconnect = UserDefaults.standard.object(forKey: Self.autoReconnectKey) as? Bool ?? true
         engineMissing = Self.scriptURL == nil
         Notifier.requestPermission()
-        startWatchTimer()
+        startTimers()
         refreshStatus()
     }
 
@@ -126,16 +130,19 @@ final class Engine: ObservableObject {
         }
     }
 
-    private func startWatchTimer() {
-        watchTimer = Timer.scheduledTimer(withTimeInterval: Self.watchInterval, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.watchTick() }
-        }
-    }
-
     /// Runs the script's watch mode, which exits at once when the tunnel is healthy.
     private func watchTick() {
         guard autoReconnect, process == nil else { return }
         run(arguments: [Self.watchArgument])
+    }
+
+    private func startTimers() {
+        watchTimer = Timer.scheduledTimer(withTimeInterval: Self.watchInterval, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.watchTick() }
+        }
+        statusTimer = Timer.scheduledTimer(withTimeInterval: Self.statusInterval, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.refreshStatus() }
+        }
     }
 
     /// Runs `windscribe-cli status` off the main thread and returns its output, empty when the CLI is missing.
@@ -152,15 +159,30 @@ final class Engine: ObservableObject {
         return output
     }
 
-    /// Reads the current tunnel from the CLI without touching it.
+    /// True when a tunnel the app showed as connected has gone down. A stopped search or a tunnel that was
+    /// never up is not a drop, so it doesn't start a reconnect the user didn't ask for.
+    nonisolated static func tunnelDropped(from previous: State, to current: State) -> Bool {
+        guard case .connected = previous else { return false }
+        return current == .down
+    }
+
+    /// Reads the current tunnel from the CLI without touching it, and starts the watch at once when
+    /// auto-reconnect is on and the tunnel just dropped, instead of waiting for the next minute's check.
     func refreshStatus() {
+        guard !isRefreshing, process == nil else { return }
+        isRefreshing = true
         Task {
             let output = await Task.detached { Self.readCliStatus() }.value
+            isRefreshing = false
             guard !isBusy else { return }
+            let previous = state
             if let status = EngineOutputParser.parseStatus(output: output) {
                 state = .connected(location: status.location, protocolName: status.protocolName)
             } else {
                 state = .down
+            }
+            if Self.tunnelDropped(from: previous, to: state) {
+                watchTick()
             }
         }
     }
