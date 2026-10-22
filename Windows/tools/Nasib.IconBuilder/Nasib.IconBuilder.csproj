@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Writes the .exe icon at build time from the app's own vector drawing. Never shipped. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Nasib.IconBuilder</RootNamespace>
+    <IsPublishable>false</IsPublishable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\src\Nasib.App\Drawing\AppIconDrawing.cs" Link="Drawing\AppIconDrawing.cs" />
+  </ItemGroup>
+
+</Project>
