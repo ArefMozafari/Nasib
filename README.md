@@ -26,8 +26,9 @@ one by one in the Windscribe app takes longer than the connection lasts.
    without an update. Only the cities you list are used.
 2. **Knocks on every address at once** and drops the ones that don't answer at all. That takes about
    two seconds and usually rules out half the list.
-3. **Ranks what's left by recent success**, datacenters and protocols both, over the last 300
-   attempts. The last pair that worked always goes first.
+3. **Ranks the datacenters by recent success** over the last 300 attempts, and tries protocols
+   strictly in the order you set in Settings. The last pair that worked always goes first. The
+   output pane says which order came from where.
 4. **Gives each attempt 10 seconds**, not the 40-odd the Windscribe CLI waits on its own.
 5. **Counts a connection only when a blocked site loads through it.** Windscribe reporting
    "Connected" isn't enough; on a filtered network that often happens with nothing getting through.
@@ -69,7 +70,7 @@ window doesn't quit the app.
 - **Auto-reconnect** checks the tunnel and a blocked site once a minute, and searches only when one of
   them fails.
 - **Settings** holds the cities to search, one per line as Windscribe spells them, and which
-  protocols to try in which order. An empty city list means every city.
+  protocols to try. Protocols are tried in exactly that order. An empty city list means every city.
 
 Every button and toggle explains itself in one line when you hover over it. The pane under the
 toggles shows what the engine is doing, colored by kind: green when it connects, gray for an attempt
