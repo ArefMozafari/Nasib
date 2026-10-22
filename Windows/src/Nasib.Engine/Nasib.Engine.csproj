@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Nasib.Engine</RootNamespace>
+  </PropertyGroup>
+
+  <!-- The bundled datacenter list ships inside the assembly, so the engine works before Windscribe has logged anything. -->
+  <ItemGroup>
+    <EmbeddedResource Include="SeedDatacenters.json" LogicalName="Nasib.Engine.SeedDatacenters.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Nasib.Engine.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,16 @@
+<Project>
+
+  <!-- Settings shared by every Windows project. The version here is the one build.ps1 stamps on the zip. -->
+  <PropertyGroup>
+    <Version>0.2.0</Version>
+    <Product>Nasib</Product>
+    <Authors>Aref Mozafari</Authors>
+    <Copyright>© 2026 Aref Mozafari. MIT License.</Copyright>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Every build is x64. The solution keeps the default platform, so all builds share one output folder. -->
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+</Project>
