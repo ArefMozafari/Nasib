@@ -85,7 +85,8 @@ Protocol Tweaks and pick the Amnezia config that matches your network.
 
 The waves in the menu bar or notification area are solid when connected, dashed while searching, and
 crossed out when down. Clicking them gives you the current server, Open Nasib, Find Now, About and
-Quit; on Windows, double-clicking opens the window. Closing the window doesn't quit the app.
+Quit; on Windows, that menu is on right-click, and a left click opens the window. Closing the window
+doesn't quit the app.
 
 - **Find Now** runs one search and stops at the first pair that works. While it runs, the button
   reads **Stop**, which ends the search and disconnects.

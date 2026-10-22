@@ -45,7 +45,6 @@ public sealed class TrayIcon : IDisposable
         menu = BuildMenu(showAbout, quit);
         notifyIcon = new Forms.NotifyIcon { Text = ApplicationName };
         notifyIcon.MouseUp += OnMouseUp;
-        notifyIcon.MouseDoubleClick += (_, _) => showMainWindow();
         notifyIcon.BalloonTipClicked += (_, _) => showMainWindow();
         controller.PropertyChanged += OnControllerPropertyChanged;
         SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
@@ -114,11 +113,16 @@ public sealed class TrayIcon : IDisposable
     }
 
     /// <summary>
-    /// Either button opens the menu, as clicking the menu bar icon does on macOS; a double-click opens the window.
+    /// As Windows apps do: a left click shows the window and a right click opens the menu.
     /// </summary>
     private void OnMouseUp(object? sender, Forms.MouseEventArgs eventArguments)
     {
-        if (eventArguments.Button is not (Forms.MouseButtons.Left or Forms.MouseButtons.Right))
+        if (eventArguments.Button == Forms.MouseButtons.Left)
+        {
+            showMainWindow();
+            return;
+        }
+        if (eventArguments.Button != Forms.MouseButtons.Right)
         {
             return;
         }
