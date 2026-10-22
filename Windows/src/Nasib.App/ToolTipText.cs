@@ -16,4 +16,5 @@ public static class ToolTipText
     public const string ResetToDefaults = "Restore the default cities and protocol order. Nothing changes until you save.";
     public const string MoveProtocolUp = "Try this protocol earlier.";
     public const string MoveProtocolDown = "Try this protocol later.";
+    public const string UpdateToRelease = "Open the release page to download the new version.";
 }

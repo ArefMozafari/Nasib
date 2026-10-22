@@ -54,6 +54,11 @@ public partial class StatusPanel : UserControl
         Controller.ShowLog();
     }
 
+    private void OnUpdateClick(object sender, RoutedEventArgs eventArguments)
+    {
+        ((UpdateChecker)UpdateButton.DataContext).OpenReleasePage();
+    }
+
     /// <summary>
     /// Handles Checked and Unchecked rather than Click, so keyboard and screen-reader toggles apply too.
     /// </summary>

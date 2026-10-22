@@ -13,10 +13,11 @@ public partial class MainWindow : Window
 
     private bool closeAllowed;
 
-    public MainWindow(EngineController controller, SettingsViewModel settings)
+    public MainWindow(EngineController controller, UpdateChecker updateChecker, SettingsViewModel settings)
     {
         InitializeComponent();
         StatusPanel.DataContext = controller;
+        StatusPanel.UpdateButton.DataContext = updateChecker;
         SettingsPanel.DataContext = settings;
     }
 
