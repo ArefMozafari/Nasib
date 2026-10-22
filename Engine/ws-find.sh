@@ -97,6 +97,8 @@ tunnel_works() {
 try_combo() {
   local location="$1" protocol="$2"
   echo "trying: $location / $protocol"
+  # The app drops a connect issued while a tunnel is still up, so tear any tunnel down first.
+  windscribe-cli status 2>/dev/null | grep -q 'Connect state: Disconnected' || disconnect_and_wait
   # Non-blocking connect, then poll so a dead combo costs 10s instead of the CLI's own ~42s.
   windscribe-cli connect -n "$location" "$protocol" >/dev/null 2>&1
   local waited=0
