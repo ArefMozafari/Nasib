@@ -35,6 +35,9 @@ final class Engine: ObservableObject {
     @Published private(set) var state: State = .unknown
     @Published private(set) var isBusy = false
     @Published private(set) var isSurveying = false
+    /// True during a find, from Find Now or from an auto-reconnect check that found the tunnel down.
+    /// A healthy check is busy for a second or two but never searching, so the button doesn't flicker.
+    @Published private(set) var isSearching = false
     @Published private(set) var recentLines: [String] = []
     @Published private(set) var engineMissing = false
     @Published var autoReconnect: Bool {
@@ -76,8 +79,9 @@ final class Engine: ObservableObject {
             Notifier.post(title: Self.nothingWorkedNotificationTitle, body: Self.nothingWorkedNotificationBody)
         case .tunnelDown:
             state = .down
+            isSearching = true
             Notifier.post(title: Self.tunnelDownNotificationTitle, body: Self.tunnelDownNotificationBody)
-        case .surveyFinished, .other:
+        case .failed, .searchStopped, .surveyStopped, .surveyFinished, .other:
             break
         }
     }
@@ -86,6 +90,7 @@ final class Engine: ObservableObject {
         process = nil
         isBusy = false
         isSurveying = false
+        isSearching = false
         refreshStatus()
     }
 
@@ -161,6 +166,8 @@ final class Engine: ObservableObject {
     }
 
     func findNow() {
+        guard process == nil else { return }
+        isSearching = true
         run(arguments: [])
     }
 
@@ -170,8 +177,8 @@ final class Engine: ObservableObject {
         run(arguments: [Self.surveyArgument])
     }
 
-    /// Sends Ctrl-C; the script reconnects the last good server before exiting.
-    func stopSurvey() {
+    /// Sends Ctrl-C. A stopped find disconnects; a stopped survey reconnects the last server that worked.
+    func stop() {
         process?.interrupt()
     }
 }

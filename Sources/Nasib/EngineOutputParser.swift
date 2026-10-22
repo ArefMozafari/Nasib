@@ -1,13 +1,40 @@
 import Foundation
 
+/// How an output line is colored. A failed attempt is routine while searching, so only
+/// "nothing worked" gets the error tone.
+enum OutputTone: Equatable {
+    case primary
+    case success
+    case muted
+    case warning
+    case error
+    case accent
+    case detail
+}
+
 /// One line of the engine script's output, turned into something the UI can react to.
 enum EngineEvent: Equatable {
     case trying(location: String, protocolName: String)
     case connected(location: String, protocolName: String)
+    case failed(location: String, protocolName: String)
     case nothingWorked
     case surveyFinished
+    case surveyStopped
+    case searchStopped
     case tunnelDown
     case other(String)
+
+    var tone: OutputTone {
+        switch self {
+        case .trying: .primary
+        case .connected: .success
+        case .failed: .muted
+        case .tunnelDown: .warning
+        case .nothingWorked: .error
+        case .searchStopped, .surveyStopped, .surveyFinished: .accent
+        case .other: .detail
+        }
+    }
 }
 
 /// What `windscribe-cli status` currently reports.
@@ -19,8 +46,11 @@ struct TunnelStatus: Equatable {
 enum EngineOutputParser {
     private static let tryingPrefix = "trying: "
     private static let connectedPrefix = "connected: "
+    private static let failedPrefix = "failed: "
     private static let nothingWorkedLine = "nothing worked"
     private static let surveyFinishedLine = "survey finished"
+    private static let surveyStoppedLine = "survey stopped"
+    private static let searchStoppedLine = "search stopped"
     private static let tunnelDownLine = "tunnel down"
     private static let pairSeparator = " / "
     private static let connectedStatePrefix = "Connect state: Connected: "
@@ -40,8 +70,13 @@ enum EngineOutputParser {
         if line.hasPrefix(connectedPrefix), let pair = splitPair(String(line.dropFirst(connectedPrefix.count))) {
             return .connected(location: pair.location, protocolName: pair.protocolName)
         }
+        if line.hasPrefix(failedPrefix), let pair = splitPair(String(line.dropFirst(failedPrefix.count))) {
+            return .failed(location: pair.location, protocolName: pair.protocolName)
+        }
         if line == nothingWorkedLine { return .nothingWorked }
         if line == surveyFinishedLine { return .surveyFinished }
+        if line == surveyStoppedLine { return .surveyStopped }
+        if line == searchStoppedLine { return .searchStopped }
         if line == tunnelDownLine { return .tunnelDown }
         return .other(line)
     }

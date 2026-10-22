@@ -79,9 +79,11 @@ struct SettingsView: View {
             }
             HStack {
                 Button("Reset to Defaults") { resetToDefaults() }
+                    .help(Tooltip.resetToDefaults)
                 Spacer()
                 Button("Save") { save() }
                     .keyboardShortcut(.defaultAction)
+                    .help(Tooltip.save)
             }
             if let message {
                 Text(message).font(.caption).foregroundStyle(.secondary)

@@ -78,16 +78,25 @@ struct ActionRow: View {
 
     var body: some View {
         HStack(spacing: Layout.rowSpacing) {
-            Button("Find Now") { engine.findNow() }
-                .disabled(engine.isBusy || engine.engineMissing)
+            if engine.isSearching {
+                Button("Stop") { engine.stop() }
+                    .help(Tooltip.stopFind)
+            } else {
+                Button("Find Now") { engine.findNow() }
+                    .disabled(engine.isBusy || engine.engineMissing)
+                    .help(Tooltip.findNow)
+            }
             if engine.isSurveying {
-                Button("Stop Survey") { engine.stopSurvey() }
+                Button("Stop Survey") { engine.stop() }
+                    .help(Tooltip.stopSurvey)
             } else {
                 Button("Start Survey") { engine.startSurvey() }
                     .disabled(engine.isBusy || engine.engineMissing)
+                    .help(Tooltip.startSurvey)
             }
             Spacer()
             Button("Show Log") { NSWorkspace.shared.open(Engine.logFile) }
+                .help(Tooltip.showLog)
         }
     }
 }
@@ -110,11 +119,27 @@ struct SettingsRows: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Layout.rowSpacing) {
             Toggle("Auto-reconnect when the tunnel drops", isOn: $engine.autoReconnect)
+                .help(Tooltip.autoReconnect)
             Toggle("Launch at login", isOn: $launchAtLogin)
                 .onChange(of: launchAtLogin) { _, enabled in setLaunchAtLogin(enabled) }
+                .help(Tooltip.launchAtLogin)
             if let loginItemError {
                 Text(loginItemError).font(.caption).foregroundStyle(.red)
             }
+        }
+    }
+}
+
+extension OutputTone {
+    var color: Color {
+        switch self {
+        case .primary: .primary
+        case .success: .green
+        case .muted: .secondary
+        case .warning: .orange
+        case .error: .red
+        case .accent: .accentColor
+        case .detail: Color(nsColor: .tertiaryLabelColor)
         }
     }
 }
@@ -127,7 +152,10 @@ struct RecentOutput: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(engine.recentLines.enumerated()), id: \.offset) { index, line in
-                        Text(line).font(.caption.monospaced()).id(index)
+                        Text(line)
+                            .font(.caption.monospaced())
+                            .foregroundStyle(EngineOutputParser.parse(line: line).tone.color)
+                            .id(index)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -194,8 +222,12 @@ struct MenuBarMenu: View {
         Text(engine.state.title)
         Divider()
         Button("Open Nasib") { openMainWindow() }
-        Button("Find Now") { engine.findNow() }
-            .disabled(engine.isBusy)
+        if engine.isSearching || engine.isSurveying {
+            Button("Stop Search") { engine.stop() }
+        } else {
+            Button("Find Now") { engine.findNow() }
+                .disabled(engine.isBusy)
+        }
         Divider()
         Button("About Nasib") { AppIcon.showAboutPanel() }
         Button("Quit Nasib") { NSApp.terminate(nil) }
