@@ -14,14 +14,25 @@ enum Layout {
     static let menuIconSize: CGFloat = 16
 }
 
-/// App name and icon at the top of the Status tab.
+/// App name and icon at the top of the Status tab, with an update button at the trailing edge when a
+/// newer release exists, so nothing below shifts when it appears.
 struct AppHeader: View {
+    @EnvironmentObject private var updateChecker: UpdateChecker
+
     var body: some View {
         HStack(spacing: Layout.rowSpacing) {
-            Image(nsImage: AppIcon.image(points: Layout.headerIconSize))
-            Text("Nasib").font(.title2.bold())
+            HStack(spacing: Layout.rowSpacing) {
+                Image(nsImage: AppIcon.image(points: Layout.headerIconSize))
+                Text("Nasib").font(.title2.bold())
+            }
+            .accessibilityElement(children: .combine)
+            Spacer()
+            if let release = updateChecker.available {
+                Button("Update to \(release.version)") { updateChecker.openReleasePage() }
+                    .buttonStyle(.borderedProminent)
+                    .help(Tooltip.update)
+            }
         }
-        .accessibilityElement(children: .combine)
     }
 }
 
@@ -207,6 +218,7 @@ struct ContentView: View {
 
 struct MenuBarMenu: View {
     @EnvironmentObject private var engine: Engine
+    @EnvironmentObject private var updateChecker: UpdateChecker
     @Environment(\.openWindow) private var openWindow
 
     private func openMainWindow() {
@@ -229,6 +241,9 @@ struct MenuBarMenu: View {
                 .disabled(engine.isBusy)
         }
         Divider()
+        if let release = updateChecker.available {
+            Button("Update to \(release.version)…") { updateChecker.openReleasePage() }
+        }
         Button("About Nasib") { AppIcon.showAboutPanel() }
         Button("Quit Nasib") { NSApp.terminate(nil) }
     }

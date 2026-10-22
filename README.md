@@ -117,6 +117,11 @@ that failed, orange when the tunnel drops, and red only when nothing works.
 
 You get a notification when it connects, when the tunnel drops, and when nothing works.
 
+On macOS, Nasib asks GitHub for the latest release at launch and once a day. When there's a newer
+one, an **Update to** button appears next to the app name, the menu gets the same item, and you get
+one notification. Each opens the release page; download the new zip and replace the app as in
+Install. Nasib never downloads or installs anything itself.
+
 Everything Nasib keeps is in `~/.ws-find` on macOS and `%LOCALAPPDATA%\Nasib` on Windows:
 
 | File | What's in it |

@@ -8,5 +8,6 @@ enum Tooltip {
     static let autoReconnect = "Check the tunnel every 3 seconds and a blocked site every minute, and search for a new server when either fails."
     static let launchAtLogin = "Start Nasib in the background when you sign in."
     static let save = "Use these cities and protocols from the next search on."
+    static let update = "Open the release page to download the new version."
     static let resetToDefaults = "Restore the default cities and protocol order. Nothing changes until you save."
 }
