@@ -6,6 +6,11 @@
 
 <p align="center">Keeps Windscribe connected from networks that block most of it.</p>
 
+<p align="center">
+  <b>macOS</b> 15 or later, Apple silicon &nbsp;·&nbsp; <b>Windows</b> 10 and 11, x64<br>
+  <a href="https://github.com/ArefMozafari/Nasib/releases/latest">Download the latest release</a>
+</p>
+
 ---
 
 Nasib (نصیب, roughly "your share") lives in the macOS menu bar or the Windows notification area. It
@@ -15,10 +20,9 @@ and does it again when the tunnel dies.
 It's for heavily filtered networks, where the server that works changes by the hour, and trying them
 one by one in the Windscribe app takes longer than the connection lasts.
 
-<p align="center">
-  <img src="docs/images/status.png" width="360" alt="Status tab: connected to Dubai over IKEv2, with Find Now, Start Survey and Show Log buttons">
-  <img src="docs/images/settings.png" width="360" alt="Settings tab: cities to search, and protocols in the order to try">
-</p>
+| macOS | Windows |
+|:---:|:---:|
+| <img src="docs/images/status.png" width="320" alt="macOS Status tab: connected to Dubai over IKEv2, with Find Now, Start Survey and Show Log, and colored engine output"> | <img src="docs/images/windows-status.png" width="320" alt="Windows Status tab: the current server, Find Now, Start Survey and Show Log, the two toggles, and colored engine output"> |
 
 ## How it decides
 
@@ -53,6 +57,10 @@ xattr -dr com.apple.quarantine /Applications/Nasib.app
 Move the app to where it will stay before turning on Launch at login. The login item points at the
 app's current location.
 
+<p align="center">
+  <img src="docs/images/settings.png" width="320" alt="macOS Settings tab: cities to search, and protocols in the order to try">
+</p>
+
 ### Windows
 
 You need 64-bit Windows 10 or 11 and the Windscribe desktop app, logged in. Nasib drives the
@@ -70,7 +78,6 @@ Personalization → Taskbar → Other system tray icons. Launch at login starts 
 area without the window, from wherever `Nasib.exe` was when you turned it on.
 
 <p align="center">
-  <img src="docs/images/windows-status.png" width="320" alt="Windows Status tab: the current server, Find Now, Start Survey and Show Log, the two toggles, and the engine's output">
   <img src="docs/images/windows-settings.png" width="320" alt="Windows Settings tab: cities to search, and protocols in the order to try with arrows to reorder them">
   <img src="docs/images/windows-tray-menu.png" width="166" alt="Windows tray menu: Nasib, the status line, Open Nasib, Find Now, About Nasib and Quit Nasib">
 </p>
