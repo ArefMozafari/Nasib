@@ -16,7 +16,16 @@ namespace Nasib.App;
 public sealed class EngineController : ObservableObject, IDisposable
 {
     private const int RecentLineLimit = 200;
-    private static readonly TimeSpan WatchInterval = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// How often the blocked-site check runs; it costs a request through the tunnel.
+    /// </summary>
+    public static readonly TimeSpan WatchInterval = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// Reading the CLI status costs no traffic, so it runs far more often than the blocked-site check.
+    /// </summary>
+    public static readonly TimeSpan StatusInterval = TimeSpan.FromSeconds(3);
 
     private const string FindNowTitle = "Find Now";
     private const string StopFindTitle = "Stop";
@@ -36,11 +45,13 @@ public sealed class EngineController : ObservableObject, IDisposable
     private readonly StatePaths paths;
     private readonly Dispatcher dispatcher;
     private readonly DispatcherTimer watchTimer;
+    private readonly DispatcherTimer statusTimer;
 
     private ConnectionState state = ConnectionState.Unknown;
     private bool isFinding;
     private bool isSurveying;
     private bool isCheckingTunnel;
+    private bool isReadingStatus;
     private CancellationTokenSource? searchCancellation;
 
     public EngineController(ServerFinder finder, TunnelController tunnel, Preferences preferences, StatePaths paths, string cliPath, bool cliInstalled)
@@ -55,6 +66,8 @@ public sealed class EngineController : ObservableObject, IDisposable
         finder.EventRaised += engineEvent => dispatcher.BeginInvoke(() => Handle(engineEvent));
         watchTimer = new DispatcherTimer { Interval = WatchInterval };
         watchTimer.Tick += (_, _) => _ = WatchTickAsync();
+        statusTimer = new DispatcherTimer { Interval = StatusInterval };
+        statusTimer.Tick += (_, _) => _ = RefreshStatusAsync();
     }
 
     /// <summary>
@@ -134,11 +147,12 @@ public sealed class EngineController : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Starts the once-a-minute watch and reads the current tunnel.
+    /// Starts the once-a-minute watch and the three-second status read, and reads the current tunnel.
     /// </summary>
     public void Start()
     {
         watchTimer.Start();
+        statusTimer.Start();
         _ = RefreshStatusAsync();
     }
 
@@ -192,6 +206,7 @@ public sealed class EngineController : ObservableObject, IDisposable
     public void Dispose()
     {
         watchTimer.Stop();
+        statusTimer.Stop();
         searchCancellation?.Cancel();
         searchCancellation?.Dispose();
     }
@@ -254,7 +269,9 @@ public sealed class EngineController : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Reads the current tunnel from the CLI without touching it.
+    /// Reads the current tunnel from the CLI without touching it, at most one read at a time and never
+    /// while a search runs. When a tunnel shown as connected has just dropped and auto-reconnect is on,
+    /// the watch starts at once instead of at the next minute's check.
     /// </summary>
     private async Task RefreshStatusAsync()
     {
@@ -263,14 +280,34 @@ public sealed class EngineController : ObservableObject, IDisposable
             State = ConnectionState.Down;
             return;
         }
-        var status = await Task.Run(() => tunnel.ReadStatusAsync(CancellationToken.None));
+        if (isReadingStatus || IsBusy)
+        {
+            return;
+        }
+        isReadingStatus = true;
+        TunnelStatus status;
+        try
+        {
+            status = await Task.Run(() => tunnel.ReadStatusAsync(CancellationToken.None));
+        }
+        finally
+        {
+            isReadingStatus = false;
+        }
+
+        // A search that started during the read owns the state now; this result is already out of date.
         if (IsBusy)
         {
             return;
         }
+        var previous = State;
         State = status.IsConnected
             ? new ConnectionState(ConnectionKind.Connected, status.Location, status.Protocol)
             : ConnectionState.Down;
+        if (ConnectionState.TunnelDropped(previous, State) && AutoReconnect)
+        {
+            await WatchTickAsync();
+        }
     }
 
     private void OnSearchStateChanged()
