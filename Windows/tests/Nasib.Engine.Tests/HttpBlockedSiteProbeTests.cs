@@ -76,6 +76,19 @@ public class HttpBlockedSiteProbeTests
             Assert.False(await new HttpBlockedSiteProbe(server.Address, Timeout).LoadsAsync(CancellationToken.None));
         }
 
+        [Fact(DisplayName = "should give up at once when cancelled instead of waiting for the timeout")]
+        public async Task ShouldGiveUpAtOnceWhenCancelledInsteadOfWaitingForTheTimeout()
+        {
+            using var server = new OneShotServer(statusLine: null);
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+            var probe = new HttpBlockedSiteProbe(server.Address, TimeSpan.FromSeconds(30));
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => probe.LoadsAsync(cancellation.Token));
+
+            Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2));
+        }
+
         [Fact(DisplayName = "should not count a request that times out")]
         public async Task ShouldNotCountARequestThatTimesOut()
         {

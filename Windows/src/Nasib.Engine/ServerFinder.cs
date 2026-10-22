@@ -40,18 +40,20 @@ public sealed class ServerFinder
     /// <summary>
     /// Tries the last pair that worked, then every reachable datacenter by rank on every protocol by rank,
     /// and stops at the first pair that carries traffic. Returns whether one did.
+    /// Cancelling it abandons the current attempt and leaves the tunnel down.
     /// </summary>
     public Task<bool> FindAsync(CancellationToken cancellationToken = default)
     {
-        return RunExclusiveAsync(scope => SearchAsync(scope, isSurvey: false, cancellationToken));
+        return RunExclusiveAsync(scope => StoppableAsync(() => SearchAsync(scope, isSurvey: false, cancellationToken), cancellationToken));
     }
 
     /// <summary>
-    /// Does nothing when the tunnel is up and a blocked site loads through it; otherwise searches as Find does.
+    /// Does nothing when the tunnel is up and a blocked site loads through it; otherwise searches as Find does,
+    /// and stops as Find does when cancelled.
     /// </summary>
     public Task<bool> WatchAsync(CancellationToken cancellationToken = default)
     {
-        return RunExclusiveAsync(async scope =>
+        return RunExclusiveAsync(scope => StoppableAsync(async () =>
         {
             if (await tunnel.WorksAsync(cancellationToken))
             {
@@ -59,7 +61,7 @@ public sealed class ServerFinder
             }
             Raise(new TunnelDownEvent());
             return await SearchAsync(scope, isSurvey: false, cancellationToken);
-        });
+        }, cancellationToken));
     }
 
     /// <summary>
@@ -81,6 +83,24 @@ public sealed class ServerFinder
                 return await ReconnectLastGoodAsync(CancellationToken.None);
             }
         });
+    }
+
+    /// <summary>
+    /// Runs a find or watch. When it is cancelled, the attempt in progress is dropped without a log line,
+    /// the tunnel is torn down, and the last good pair is deliberately not reconnected: the user asked to stop.
+    /// </summary>
+    private async Task<bool> StoppableAsync(Func<Task<bool>> search, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await search();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            await tunnel.DisconnectAndWaitAsync(CancellationToken.None);
+            Raise(new SearchStoppedEvent());
+            return false;
+        }
     }
 
     private async Task<bool> RunExclusiveAsync(Func<SearchScope, Task<bool>> search)
@@ -175,6 +195,7 @@ public sealed class ServerFinder
             return true;
         }
         attemptLog.Record(nickname, protocol, succeeded: false);
+        Raise(new FailedEvent(nickname, protocol));
         await tunnel.DisconnectAndWaitAsync(cancellationToken);
         return false;
     }

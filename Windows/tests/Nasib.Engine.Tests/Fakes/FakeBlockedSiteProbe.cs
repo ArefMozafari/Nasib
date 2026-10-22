@@ -19,9 +19,19 @@ internal sealed class FakeBlockedSiteProbe : IBlockedSiteProbe
 
     public int ProbeCalls { get; private set; }
 
-    public Task<bool> LoadsAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Called when a probe starts; a probe then never answers until it is cancelled, like a blackholed request.
+    /// </summary>
+    public Action? HangsAfter { get; set; }
+
+    public async Task<bool> LoadsAsync(CancellationToken cancellationToken)
     {
         ProbeCalls++;
-        return Task.FromResult(cli.State == FakeTunnelState.Connected && LoadsThrough(cli.ConnectedLocation));
+        if (HangsAfter is not null)
+        {
+            HangsAfter();
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+        }
+        return cli.State == FakeTunnelState.Connected && LoadsThrough(cli.ConnectedLocation);
     }
 }

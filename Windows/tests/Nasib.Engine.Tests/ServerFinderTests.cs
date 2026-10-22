@@ -133,6 +133,83 @@ public class ServerFinderTests
             Assert.Contains(harness.Events, engineEvent => engineEvent.Text == "search already running");
         }
 
+        [Fact(DisplayName = "should report a failed attempt after logging it")]
+        public async Task ShouldReportAFailedAttemptAfterLoggingIt()
+        {
+            using var harness = new EngineHarness();
+            harness.Cli.PairConnects = (_, protocol) => protocol == "tcp";
+            harness.SaveConfiguration(new EngineConfiguration([EngineHarness.City], ["ikev2", "tcp"]));
+
+            await harness.Finder.FindAsync();
+
+            var pairEvents = harness.Events.Where(engineEvent => engineEvent is TryingEvent or FailedEvent or ConnectedEvent);
+            Assert.Equal(
+                ["trying: Khalifa / ikev2", "failed: Khalifa / ikev2", "trying: Khalifa / tcp", "connected: Khalifa / tcp"],
+                pairEvents.Select(engineEvent => engineEvent.Text));
+        }
+
+        [Fact(DisplayName = "should stop promptly and stay disconnected when cancelled mid-attempt")]
+        public async Task ShouldStopPromptlyAndStayDisconnectedWhenCancelledMidAttempt()
+        {
+            using var harness = new EngineHarness();
+            harness.WriteLastGood(EngineHarness.Nickname, EngineHarness.Protocol);
+            harness.SaveConfiguration(new EngineConfiguration([EngineHarness.City], ["ikev2", "tcp"]));
+            using var cancellation = new CancellationTokenSource();
+
+            // Cancelled right as the tunnel starts coming up, so the stop has a live tunnel to tear down.
+            harness.Cli.BeforeConnect = (_, _) => cancellation.Cancel();
+
+            var found = await harness.Finder.FindAsync(cancellation.Token);
+
+            Assert.False(found);
+            Assert.Single(harness.Cli.ConnectCalls);
+            Assert.Equal(FakeTunnelState.Disconnected, harness.Cli.State);
+            Assert.Empty(harness.LoggedAttempts());
+            Assert.IsType<SearchStoppedEvent>(harness.Events[^1]);
+            Assert.True(harness.Waiter.TotalWaited < EngineTimings.Default.ConnectTimeout);
+        }
+
+        [Fact(DisplayName = "should stop at once when cancelled during the blocked-site check")]
+        public async Task ShouldStopAtOnceWhenCancelledDuringTheBlockedSiteCheck()
+        {
+            using var harness = new EngineHarness();
+            harness.WriteLastGood(EngineHarness.Nickname, EngineHarness.Protocol);
+            using var cancellation = new CancellationTokenSource();
+            harness.BlockedSiteProbe.HangsAfter = cancellation.Cancel;
+
+            var search = harness.Finder.FindAsync(cancellation.Token);
+            var finished = await Task.WhenAny(search, Task.Delay(TimeSpan.FromSeconds(2)));
+
+            Assert.Same(search, finished);
+            Assert.False(await search);
+            Assert.Empty(harness.LoggedAttempts());
+            Assert.Equal(FakeTunnelState.Disconnected, harness.Cli.State);
+            Assert.IsType<SearchStoppedEvent>(harness.Events[^1]);
+        }
+
+        [Fact(DisplayName = "should not reconnect the last good pair when stopped")]
+        public async Task ShouldNotReconnectTheLastGoodPairWhenStopped()
+        {
+            using var harness = new EngineHarness();
+            harness.Cli.PairConnects = (_, _) => false;
+            harness.SaveConfiguration(new EngineConfiguration([EngineHarness.City], ["ikev2", "tcp", "udp"]));
+            using var cancellation = new CancellationTokenSource();
+            harness.Cli.BeforeConnect = (_, protocol) =>
+            {
+                if (protocol == "tcp")
+                {
+                    harness.WriteLastGood(EngineHarness.Nickname, "wireguard");
+                    cancellation.Cancel();
+                }
+            };
+
+            await harness.Finder.FindAsync(cancellation.Token);
+
+            Assert.Equal([("Khalifa", "ikev2"), ("Khalifa", "tcp")], harness.Cli.ConnectCalls);
+            Assert.Equal(["Khalifa,ikev2,fail"], harness.LoggedAttempts());
+            Assert.DoesNotContain(harness.Events, engineEvent => engineEvent is SurveyStoppedEvent);
+        }
+
         [Fact(DisplayName = "should report when no datacenter matches the cities")]
         public async Task ShouldReportWhenNoDatacenterMatchesTheCities()
         {
@@ -187,6 +264,22 @@ public class ServerFinderTests
 
             Assert.IsType<TunnelDownEvent>(harness.Events[0]);
             Assert.Equal(["Khalifa,ikev2,ok"], harness.LoggedAttempts());
+        }
+
+        [Fact(DisplayName = "should stop like a find when cancelled")]
+        public async Task ShouldStopLikeAFindWhenCancelled()
+        {
+            using var harness = new EngineHarness();
+            harness.WriteLastGood(EngineHarness.Nickname, EngineHarness.Protocol);
+            using var cancellation = new CancellationTokenSource();
+            harness.Cli.BeforeConnect = (_, _) => cancellation.Cancel();
+
+            var healthy = await harness.Finder.WatchAsync(cancellation.Token);
+
+            Assert.False(healthy);
+            Assert.Single(harness.Cli.ConnectCalls);
+            Assert.Equal(FakeTunnelState.Disconnected, harness.Cli.State);
+            Assert.IsType<SearchStoppedEvent>(harness.Events[^1]);
         }
     }
 

@@ -8,6 +8,8 @@ public class EngineEventTests
         {
             { new TryingEvent("Stolen Cheese", "ikev2"), "trying: Stolen Cheese / ikev2" },
             { new ConnectedEvent("Magic City", "wireguard"), "connected: Magic City / wireguard" },
+            { new FailedEvent("Lygos", "tcp"), "failed: Lygos / tcp" },
+            { new SearchStoppedEvent(), "search stopped" },
             { new NothingWorkedEvent(), "nothing worked" },
             { new TunnelDownEvent(), "tunnel down" },
             { new SurveyFinishedEvent(), "survey finished" },

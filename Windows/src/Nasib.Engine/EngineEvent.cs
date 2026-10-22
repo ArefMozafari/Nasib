@@ -29,6 +29,22 @@ public sealed record ConnectedEvent(string Nickname, string Protocol) : EngineEv
 }
 
 /// <summary>
+/// An attempt ended without a blocked site loading. Normal while searching, not an error.
+/// </summary>
+public sealed record FailedEvent(string Nickname, string Protocol) : EngineEvent
+{
+    public override string Text => "failed: " + Pair(Nickname, Protocol);
+}
+
+/// <summary>
+/// A find or watch was stopped; the tunnel is torn down and nothing is reconnected.
+/// </summary>
+public sealed record SearchStoppedEvent : EngineEvent
+{
+    public override string Text => "search stopped";
+}
+
+/// <summary>
 /// A search tried every pair and none worked.
 /// </summary>
 public sealed record NothingWorkedEvent : EngineEvent
