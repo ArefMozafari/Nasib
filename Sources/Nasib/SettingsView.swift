@@ -57,6 +57,7 @@ struct SettingsView: View {
                 Text("Cities to search").font(.headline)
                 Text("One per line, as Windscribe names them. Leave empty to search every city.")
                     .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 TextEditor(text: $citiesText)
                     .font(.body.monospaced())
                     .frame(height: Layout.citiesEditorHeight)
@@ -65,6 +66,7 @@ struct SettingsView: View {
                 Text("Protocols, in the order to try").font(.headline)
                 Text("Drag to reorder. Unchecked protocols are never tried.")
                     .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 List {
                     ForEach($protocolRows) { $row in
                         Toggle(row.name, isOn: $row.enabled)

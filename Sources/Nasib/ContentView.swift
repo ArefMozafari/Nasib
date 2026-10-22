@@ -148,11 +148,14 @@ struct StatusTab: View {
 struct ContentView: View {
     var body: some View {
         TabView {
+            // Both tabs pin to the top; the window takes the taller tab's height and would otherwise center the shorter one.
             StatusTab()
                 .padding(Layout.padding)
+                .frame(maxHeight: .infinity, alignment: .top)
                 .tabItem { Text("Status") }
             SettingsView()
                 .padding(Layout.padding)
+                .frame(maxHeight: .infinity, alignment: .top)
                 .tabItem { Text("Settings") }
         }
         .padding(Layout.padding)
