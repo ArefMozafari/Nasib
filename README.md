@@ -41,8 +41,9 @@ one by one in the Windscribe app takes longer than the connection lasts.
 You need macOS 15 or later on Apple silicon, and the Windscribe desktop app, logged in. Nasib drives
 the command-line tool that ships inside it, `/usr/local/bin/windscribe-cli`.
 
-Download the zip from the [latest release](https://github.com/ArefMozafari/Nasib/releases/latest),
-unzip it, and move `Nasib.app` to Applications. The build isn't notarized, so macOS blocks the first launch.
+Download `Nasib-<version>-macos.zip` from the
+[latest release](https://github.com/ArefMozafari/Nasib/releases/latest), unzip it, and move `Nasib.app`
+to Applications. The build isn't notarized, so macOS blocks the first launch.
 Allow it under System Settings → Privacy & Security → Open Anyway, or clear the quarantine flag:
 
 ```bash
@@ -124,7 +125,8 @@ With Xcode installed:
 ```
 
 That builds `build/Nasib.app`, copies it to `~/Applications` and launches it. `./build.sh` alone
-builds without installing.
+builds without installing, and `./build.sh release` runs both test suites first, then writes
+`build/Nasib-<version>-macos.zip`.
 
 ```bash
 swift test

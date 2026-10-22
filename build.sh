@@ -1,5 +1,6 @@
 #!/bin/zsh
-# Builds Nasib.app into build/ and, with "install", copies it to ~/Applications and launches it.
+# Builds Nasib.app into build/. With "install" it also copies the app to ~/Applications and launches it;
+# with "release" it runs the tests first and zips the app as build/Nasib-<version>-macos.zip.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -7,6 +8,7 @@ APP_NAME="Nasib"
 BUILD_DIR="build"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 INSTALL_DIR="$HOME/Applications"
+RELEASE_PLATFORM_SUFFIX="macos"
 
 ICON_WORK_DIR="$BUILD_DIR/icons"
 APP_ICON_NAME="AppIcon"
@@ -38,6 +40,11 @@ render_icons() {
   done
 }
 
+if [[ "${1:-}" == "release" ]]; then
+  swift test
+  zsh Tests/Engine/ws-find.test.zsh
+fi
+
 swift build -c release
 
 rm -rf "$APP_BUNDLE"
@@ -56,4 +63,13 @@ if [[ "${1:-}" == "install" ]]; then
   cp -R "$APP_BUNDLE" "$INSTALL_DIR/"
   open "$INSTALL_DIR/$APP_NAME.app"
   echo "installed and launched $INSTALL_DIR/$APP_NAME.app"
+fi
+
+if [[ "${1:-}" == "release" ]]; then
+  version=$(plutil -extract CFBundleShortVersionString raw Packaging/Info.plist)
+  release_zip="$BUILD_DIR/$APP_NAME-$version-$RELEASE_PLATFORM_SUFFIX.zip"
+  rm -f "$release_zip"
+  # ditto keeps the bundle's signature and extended attributes intact, which a plain zip can break.
+  ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$release_zip"
+  echo "released $release_zip"
 fi
