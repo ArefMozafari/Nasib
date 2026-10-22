@@ -21,6 +21,15 @@ public sealed record ConnectionState(ConnectionKind Kind, string? Location = nul
 
     public static ConnectionState Down { get; } = new(ConnectionKind.Down);
 
+    /// <summary>
+    /// True when a tunnel shown as connected has gone down. A stopped search or a tunnel that was never up
+    /// is not a drop, so it doesn't start a reconnect the user didn't ask for.
+    /// </summary>
+    public static bool TunnelDropped(ConnectionState previous, ConnectionState current)
+    {
+        return previous.Kind == ConnectionKind.Connected && current.Kind == ConnectionKind.Down;
+    }
+
     public string Title => Kind switch
     {
         ConnectionKind.Unknown => "Checking…",

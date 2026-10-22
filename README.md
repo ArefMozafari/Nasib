@@ -106,8 +106,8 @@ doesn't quit the app.
   at a success. It's slow, and it's how the rankings get refreshed. **Stop Survey** ends it and puts
   you back on the last pair that worked.
 - **Auto-reconnect** checks the tunnel and a blocked site once a minute, and searches only when one of
-  them fails. On macOS, the status is also read every 3 seconds, so a dropped tunnel shows up and
-  starts a search within seconds instead of at the next minute's check.
+  them fails. The status is also read every 3 seconds, so a dropped tunnel shows up and starts a
+  search within seconds instead of at the next minute's check.
 - **Settings** holds the cities to search, one per line as Windscribe spells them, and which
   protocols to try. Protocols are tried in exactly that order. An empty city list means every city.
 
