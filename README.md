@@ -1,46 +1,107 @@
-# Nasib
+<p align="center">
+  <img src="docs/images/icon.png" width="128" alt="Nasib app icon: three white waves on blue">
+</p>
 
-A macOS menu bar app that finds a Windscribe datacenter and protocol that works from a censored
-network, keeps you connected, and reconnects on its own when the tunnel dies.
+<h1 align="center">Nasib</h1>
 
-## How it works
+<p align="center">Keeps Windscribe connected from networks that block most of it.</p>
 
-- `Engine/ws-find.sh` is the engine. It reads the datacenters Windscribe currently ships from the
-  Windscribe app's own log, probes which ones answer at all, ranks datacenters and protocols by
-  their recent success rate, and connects through `windscribe-cli`. A connection counts only when a
-  blocked site answers through the tunnel.
-- The app bundles that script, runs it, and shows its progress. With auto-reconnect on, it runs the
-  script's watch mode every minute, which does nothing while the tunnel is healthy.
-- State lives in `~/.ws-find`: `log.csv` holds every attempt, `last_good` the last working pair.
+---
 
-## Build and run
+Nasib (نصیب, roughly "your share") lives in the macOS menu bar. It finds a Windscribe datacenter and
+protocol that actually carries traffic right now, connects to it, and does it again when the tunnel
+dies.
 
-Requires Xcode and the Windscribe desktop app with its CLI at `/usr/local/bin/windscribe-cli`.
+It was written for Iran, where the server that works changes by the hour, and trying them one by one
+in the Windscribe app takes longer than the connection lasts.
 
+<p align="center">
+  <img src="docs/images/status.png" width="360" alt="Status tab: connected to Dubai over IKEv2, with Find Now, Start Survey and Show Log buttons">
+  <img src="docs/images/settings.png" width="360" alt="Settings tab: cities to search, and protocols in the order to try">
+</p>
+
+## How it decides
+
+1. **Reads the datacenters from Windscribe's own log**, so new, moved or retired servers show up
+   without an update. Only the cities you list are used.
+2. **Knocks on every address at once** and drops the ones that don't answer at all. That takes about
+   two seconds and usually rules out half the list.
+3. **Ranks what's left by recent success**, datacenters and protocols both, over the last 300
+   attempts. The last pair that worked always goes first.
+4. **Gives each attempt 10 seconds**, not the 40-odd the Windscribe CLI waits on its own.
+5. **Counts a connection only when a blocked site loads through it.** Windscribe reporting
+   "Connected" isn't enough; here that often happens with nothing getting through.
+
+## Install
+
+You need macOS 15 or later on Apple silicon, and the Windscribe desktop app, logged in. Nasib drives
+the command-line tool that ships inside it, `/usr/local/bin/windscribe-cli`.
+
+Download `Nasib-0.1.0.zip` from [Releases](https://github.com/ArefMozafari/Nasib/releases), unzip it,
+and move `Nasib.app` to Applications. The build isn't notarized, so macOS blocks the first launch.
+Allow it under System Settings → Privacy & Security → Open Anyway, or clear the quarantine flag:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Nasib.app
 ```
-./build.sh install
-```
 
-Builds `build/Nasib.app`, copies it to `~/Applications`, and launches it. Run `./build.sh` alone to
-build without installing. `swift test` runs the unit tests.
+Move the app to where it will stay before turning on Launch at login. The login item points at the
+app's current location.
 
 ## Using it
 
-The menu bar icon shows the state: solid waves when connected, dashed while searching, slashed when
-down. The Status tab has Find Now, Start/Stop Survey (tests every combination and records each result
-without stopping), Show Log, and toggles for auto-reconnect and launch at login. Closing the window
-keeps the app in the menu bar; quit from there. The app posts a notification on every switch, when a
-search finds nothing, and when the watcher sees the tunnel down.
+The waves in the menu bar are solid when connected, dashed while searching, and crossed out when
+down. Clicking them gives you the current server, Open Nasib, Find Now and Quit. Closing the window
+doesn't quit the app.
 
-The Settings tab edits which cities to search and which protocols to try, in order. Saving writes
-`~/.ws-find/config`, which the engine sources on every run; without that file the engine uses the
-defaults in `Engine/ws-find.sh`.
+- **Find Now** runs one search and stops at the first pair that works.
+- **Start Survey** tries every datacenter on every protocol and records each result without stopping
+  at a success. It's slow, and it's how the rankings get refreshed. Stopping it puts you back on the
+  last pair that worked.
+- **Auto-reconnect** checks the tunnel and a blocked site once a minute, and searches only when one of
+  them fails.
+- **Settings** holds the cities to search, one per line as Windscribe spells them, and which
+  protocols to try in which order. An empty city list means every city.
 
-## Icons
+You get a notification when it connects, when the tunnel drops, and when nothing works.
 
-`Design/AppIcon.icon` is an Icon Composer document (open it in Xcode's Icon Composer): a blue gradient
-fill with one glass layer, `Assets/waves.svg`. `build.sh` compiles it with `actool` into `Assets.car`,
-which macOS 26 and later render as Liquid Glass with light, dark and tinted variants, plus an `.icns`
-fallback for macOS 15. `Design/MenuBar*.svg` are the three menu bar glyphs (connected, searching, down),
-rendered by `Tools/render-svg.swift` into 18-point PNG pairs. Edit the sources and rebuild; never
-hand-export a PNG.
+Everything Nasib keeps is in `~/.ws-find`:
+
+| File | What's in it |
+|---|---|
+| `log.csv` | Every attempt: time, datacenter, protocol, `ok` or `fail` |
+| `last_good` | The last datacenter and protocol that worked |
+| `config` | What you saved in Settings |
+
+## Building from source
+
+With Xcode installed:
+
+```bash
+./build.sh install
+```
+
+That builds `build/Nasib.app`, copies it to `~/Applications` and launches it. `./build.sh` alone
+builds without installing.
+
+```bash
+swift test
+zsh Tests/Engine/ws-find.test.zsh
+```
+
+The first runs the app's unit tests. The second runs the engine against stub `windscribe-cli`, `curl`
+and `nc` in a throwaway home folder, so it never touches the real VPN.
+
+The engine works without the app. `Engine/ws-find.sh` with no arguments searches once; it also takes
+`--watch`, `--survey`, `--reach`, `--rank` and `--locations`, each described at the top of the file.
+
+`Design/` holds the icon sources: an Icon Composer document for the app icon, which macOS 26 renders as
+Liquid Glass, and one SVG per menu bar state. `build.sh` compiles them; no PNG is exported by hand.
+
+## Known limits
+
+- macOS only. A Windows version is tracked in [#1](https://github.com/ArefMozafari/Nasib/issues/1).
+- Another VPN running a system-wide tunnel, such as v2rayN in TUN mode, can fool the blocked-site
+  check and keeps auto-reconnect searching underneath it. Tracked in
+  [#4](https://github.com/ArefMozafari/Nasib/issues/4).
+- Builds are signed ad hoc, not notarized.
