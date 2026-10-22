@@ -40,7 +40,7 @@
                                     Width="{x:Static app:DesignTokens.ReorderButtonWidth}"
                                     Margin="{x:Static app:DesignTokens.InlineGap}"
                                     Tag="{Binding}"
-                                    ToolTip="Move down"
+                                    ToolTip="{x:Static app:ToolTipText.MoveProtocolDown}"
                                     AutomationProperties.Name="{Binding Name, StringFormat=Move {0} down}"
                                     Click="OnMoveDownClick" />
                             <Button DockPanel.Dock="Right"
@@ -48,7 +48,7 @@
                                     FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                     Width="{x:Static app:DesignTokens.ReorderButtonWidth}"
                                     Tag="{Binding}"
-                                    ToolTip="Move up"
+                                    ToolTip="{x:Static app:ToolTipText.MoveProtocolUp}"
                                     AutomationProperties.Name="{Binding Name, StringFormat=Move {0} up}"
                                     Click="OnMoveUpClick" />
                             <CheckBox Content="{Binding Name}" IsChecked="{Binding Enabled}" VerticalAlignment="Center" />
@@ -59,8 +59,13 @@
         </Border>
 
         <DockPanel Margin="{x:Static app:DesignTokens.SectionGap}">
-            <Button Content="Reset to Defaults" Click="OnResetClick" />
-            <Button Content="Save" IsDefault="True" HorizontalAlignment="Right" Style="{DynamicResource AccentButtonStyle}" Click="OnSaveClick" />
+            <Button Content="Reset to Defaults" ToolTip="{x:Static app:ToolTipText.ResetToDefaults}" Click="OnResetClick" />
+            <Button Content="Save"
+                    IsDefault="True"
+                    HorizontalAlignment="Right"
+                    Style="{DynamicResource AccentButtonStyle}"
+                    ToolTip="{x:Static app:ToolTipText.Save}"
+                    Click="OnSaveClick" />
         </DockPanel>
         <TextBlock Text="{Binding Message}" Style="{StaticResource CaptionText}" Margin="{x:Static app:DesignTokens.RowGap}" />
     </StackPanel>

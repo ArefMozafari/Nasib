@@ -26,6 +26,11 @@ public static class DesignTokens
     public const double BusyIndicatorWidth = 48;
     public const double ReorderButtonWidth = 40;
 
+    /// <summary>
+    /// Wide enough for "Find Now", so the row does not shift when the button reads "Stop".
+    /// </summary>
+    public const double FindButtonMinWidth = 84;
+
     public static Thickness WindowPadding { get; } = new(Padding);
 
     public static Thickness SectionGap { get; } = new(0, SectionSpacing, 0, 0);

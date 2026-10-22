@@ -11,11 +11,18 @@ namespace Nasib.App;
 
 /// <summary>
 /// Runs the engine off the UI thread and mirrors its progress for the window and the tray.
+/// Every search can be stopped: a find or watch stops and disconnects, a survey stops and reconnects.
 /// </summary>
 public sealed class EngineController : ObservableObject, IDisposable
 {
     private const int RecentLineLimit = 200;
     private static readonly TimeSpan WatchInterval = TimeSpan.FromSeconds(60);
+
+    private const string FindNowTitle = "Find Now";
+    private const string StopFindTitle = "Stop";
+    private const string StopFindMenuTitle = "Stop Search";
+    private const string StartSurveyTitle = "Start Survey";
+    private const string StopSurveyTitle = "Stop Survey";
 
     private const string ConnectedNotificationTitle = "Connected";
     private const string NothingWorkedNotificationTitle = "No working server";
@@ -31,9 +38,10 @@ public sealed class EngineController : ObservableObject, IDisposable
     private readonly DispatcherTimer watchTimer;
 
     private ConnectionState state = ConnectionState.Unknown;
-    private bool isBusy;
+    private bool isFinding;
     private bool isSurveying;
-    private CancellationTokenSource? surveyCancellation;
+    private bool isCheckingTunnel;
+    private CancellationTokenSource? searchCancellation;
 
     public EngineController(ServerFinder finder, TunnelController tunnel, Preferences preferences, StatePaths paths, string cliPath, bool cliInstalled)
     {
@@ -46,7 +54,7 @@ public sealed class EngineController : ObservableObject, IDisposable
         dispatcher = Dispatcher.CurrentDispatcher;
         finder.EventRaised += engineEvent => dispatcher.BeginInvoke(() => Handle(engineEvent));
         watchTimer = new DispatcherTimer { Interval = WatchInterval };
-        watchTimer.Tick += (_, _) => WatchTick();
+        watchTimer.Tick += (_, _) => _ = WatchTickAsync();
     }
 
     /// <summary>
@@ -60,15 +68,17 @@ public sealed class EngineController : ObservableObject, IDisposable
         private set => SetProperty(ref state, value);
     }
 
-    public bool IsBusy
+    /// <summary>
+    /// True while a find runs, whether from Find Now or from auto-reconnect.
+    /// </summary>
+    public bool IsFinding
     {
-        get => isBusy;
+        get => isFinding;
         private set
         {
-            if (SetProperty(ref isBusy, value))
+            if (SetProperty(ref isFinding, value))
             {
-                OnPropertyChanged(nameof(CanStartSearch));
-                OnPropertyChanged(nameof(CanUseSurveyButton));
+                OnSearchStateChanged();
             }
         }
     }
@@ -80,23 +90,35 @@ public sealed class EngineController : ObservableObject, IDisposable
         {
             if (SetProperty(ref isSurveying, value))
             {
-                OnPropertyChanged(nameof(SurveyButtonTitle));
-                OnPropertyChanged(nameof(CanUseSurveyButton));
+                OnSearchStateChanged();
             }
         }
     }
+
+    public bool IsBusy => IsFinding || IsSurveying;
 
     public bool CliMissing { get; }
 
     public string CliPath { get; }
 
-    public bool CanStartSearch => !IsBusy && !CliMissing;
+    /// <summary>
+    /// Find Now doubles as Stop while a find runs; a survey has its own Stop button.
+    /// </summary>
+    public bool CanUseFindButton => !CliMissing && !IsSurveying;
 
-    public bool CanUseSurveyButton => IsSurveying || CanStartSearch;
+    public bool CanUseSurveyButton => !CliMissing && !IsFinding;
 
-    public string SurveyButtonTitle => IsSurveying ? "Stop Survey" : "Start Survey";
+    public string FindButtonTitle => IsFinding ? StopFindTitle : FindNowTitle;
 
-    public ObservableCollection<string> RecentLines { get; } = [];
+    public string FindMenuItemTitle => IsFinding ? StopFindMenuTitle : FindNowTitle;
+
+    public string FindButtonToolTip => IsFinding ? ToolTipText.StopFind : ToolTipText.FindNow;
+
+    public string SurveyButtonTitle => IsSurveying ? StopSurveyTitle : StartSurveyTitle;
+
+    public string SurveyButtonToolTip => IsSurveying ? ToolTipText.StopSurvey : ToolTipText.StartSurvey;
+
+    public ObservableCollection<OutputLine> RecentLines { get; } = [];
 
     public bool AutoReconnect
     {
@@ -120,25 +142,38 @@ public sealed class EngineController : ObservableObject, IDisposable
         _ = RefreshStatusAsync();
     }
 
-    public void FindNow()
+    /// <summary>
+    /// Starts a find, or stops the one that is running.
+    /// </summary>
+    public void ToggleFind()
     {
-        _ = RunAsync(cancellationToken => finder.FindAsync(cancellationToken), CancellationToken.None);
+        if (IsFinding)
+        {
+            searchCancellation?.Cancel();
+            return;
+        }
+        if (CanUseFindButton)
+        {
+            _ = RunFindAsync(cancellationToken => finder.FindAsync(cancellationToken));
+        }
     }
 
+    /// <summary>
+    /// Starts a survey, or stops the one that is running.
+    /// </summary>
     public void ToggleSurvey()
     {
         if (IsSurveying)
         {
-            surveyCancellation?.Cancel();
+            searchCancellation?.Cancel();
             return;
         }
-        if (!CanStartSearch)
+        if (!CanUseSurveyButton)
         {
             return;
         }
-        surveyCancellation = new CancellationTokenSource();
         IsSurveying = true;
-        _ = RunAsync(cancellationToken => finder.SurveyAsync(cancellationToken), surveyCancellation.Token);
+        _ = RunAsync(cancellationToken => finder.SurveyAsync(cancellationToken));
     }
 
     /// <summary>
@@ -157,45 +192,63 @@ public sealed class EngineController : ObservableObject, IDisposable
     public void Dispose()
     {
         watchTimer.Stop();
-        surveyCancellation?.Cancel();
-        surveyCancellation?.Dispose();
+        searchCancellation?.Cancel();
+        searchCancellation?.Dispose();
     }
 
     /// <summary>
-    /// Runs Watch, which returns at once when the tunnel works.
+    /// Checks the tunnel quietly and starts a watch only when it stopped working, so a healthy minute
+    /// never turns Find Now into Stop.
     /// </summary>
-    private void WatchTick()
+    private async Task WatchTickAsync()
     {
-        if (AutoReconnect && CanStartSearch)
-        {
-            _ = RunAsync(cancellationToken => finder.WatchAsync(cancellationToken), CancellationToken.None);
-        }
-    }
-
-    /// <summary>
-    /// Runs one search on a worker thread; refuses while another is in progress.
-    /// </summary>
-    private async Task RunAsync(Func<CancellationToken, Task<bool>> search, CancellationToken cancellationToken)
-    {
-        if (IsBusy || CliMissing)
+        if (!AutoReconnect || IsBusy || CliMissing || isCheckingTunnel)
         {
             return;
         }
-        IsBusy = true;
+        isCheckingTunnel = true;
+        bool works;
+        try
+        {
+            works = await Task.Run(() => tunnel.WorksAsync(CancellationToken.None));
+        }
+        finally
+        {
+            isCheckingTunnel = false;
+        }
+        if (!works && AutoReconnect && !IsBusy)
+        {
+            await RunFindAsync(cancellationToken => finder.WatchAsync(cancellationToken));
+        }
+    }
+
+    private Task RunFindAsync(Func<CancellationToken, Task<bool>> search)
+    {
+        IsFinding = true;
+        return RunAsync(search);
+    }
+
+    /// <summary>
+    /// Runs one search on a worker thread with a fresh cancellation, then reads the tunnel again.
+    /// </summary>
+    private async Task RunAsync(Func<CancellationToken, Task<bool>> search)
+    {
+        searchCancellation = new CancellationTokenSource();
+        var cancellationToken = searchCancellation.Token;
         try
         {
             await Task.Run(() => search(cancellationToken), CancellationToken.None);
         }
         catch (Exception exception)
         {
-            Append("engine error: " + exception.Message);
+            Append(new OutputLine("engine error: " + exception.Message, OutputKind.Other));
         }
         finally
         {
-            IsBusy = false;
+            searchCancellation.Dispose();
+            searchCancellation = null;
+            IsFinding = false;
             IsSurveying = false;
-            surveyCancellation?.Dispose();
-            surveyCancellation = null;
         }
         await RefreshStatusAsync();
     }
@@ -220,9 +273,21 @@ public sealed class EngineController : ObservableObject, IDisposable
             : ConnectionState.Down;
     }
 
+    private void OnSearchStateChanged()
+    {
+        OnPropertyChanged(nameof(IsBusy));
+        OnPropertyChanged(nameof(CanUseFindButton));
+        OnPropertyChanged(nameof(CanUseSurveyButton));
+        OnPropertyChanged(nameof(FindButtonTitle));
+        OnPropertyChanged(nameof(FindMenuItemTitle));
+        OnPropertyChanged(nameof(FindButtonToolTip));
+        OnPropertyChanged(nameof(SurveyButtonTitle));
+        OnPropertyChanged(nameof(SurveyButtonToolTip));
+    }
+
     private void Handle(EngineEvent engineEvent)
     {
-        Append(engineEvent.Text);
+        Append(OutputLine.From(engineEvent));
         switch (engineEvent)
         {
             case TryingEvent trying:
@@ -240,10 +305,13 @@ public sealed class EngineController : ObservableObject, IDisposable
                 State = ConnectionState.Down;
                 NotificationRequested?.Invoke(TunnelDownNotificationTitle, TunnelDownNotificationBody);
                 break;
+            case SearchStoppedEvent:
+                State = ConnectionState.Down;
+                break;
         }
     }
 
-    private void Append(string line)
+    private void Append(OutputLine line)
     {
         RecentLines.Add(line);
         while (RecentLines.Count > RecentLineLimit)

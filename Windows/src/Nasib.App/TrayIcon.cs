@@ -89,9 +89,11 @@ public sealed class TrayIcon : IDisposable
         var openNasib = new MenuItem { Header = "Open Nasib" };
         openNasib.Click += (_, _) => showMainWindow();
 
-        var findNow = new MenuItem { Header = "Find Now" };
-        findNow.SetBinding(UIElement.IsEnabledProperty, new Binding(nameof(EngineController.CanStartSearch)));
-        findNow.Click += (_, _) => controller.FindNow();
+        // Reads "Stop Search" while any find runs, and stops it.
+        var findNow = new MenuItem();
+        findNow.SetBinding(HeaderedItemsControl.HeaderProperty, new Binding(nameof(EngineController.FindMenuItemTitle)));
+        findNow.SetBinding(UIElement.IsEnabledProperty, new Binding(nameof(EngineController.CanUseFindButton)));
+        findNow.Click += (_, _) => controller.ToggleFind();
 
         var about = new MenuItem { Header = "About Nasib" };
         about.Click += (_, _) => showAbout();

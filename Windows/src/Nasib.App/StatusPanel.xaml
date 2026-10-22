@@ -55,29 +55,43 @@
                 <Run Text="{Binding CliPath, Mode=OneWay}" />
             </TextBlock>
 
+            <!-- Tooltips also show on disabled buttons, so it is clear what each one would do. -->
             <DockPanel Margin="{x:Static app:DesignTokens.SectionGap}">
-                <Button Content="Find Now" IsEnabled="{Binding CanStartSearch}" Click="OnFindNowClick" />
+                <Button Content="{Binding FindButtonTitle}"
+                        IsEnabled="{Binding CanUseFindButton}"
+                        ToolTip="{Binding FindButtonToolTip}"
+                        ToolTipService.ShowOnDisabled="True"
+                        MinWidth="{x:Static app:DesignTokens.FindButtonMinWidth}"
+                        Click="OnFindClick" />
                 <Button Content="{Binding SurveyButtonTitle}"
                         IsEnabled="{Binding CanUseSurveyButton}"
+                        ToolTip="{Binding SurveyButtonToolTip}"
+                        ToolTipService.ShowOnDisabled="True"
                         Margin="{x:Static app:DesignTokens.InlineGap}"
                         Click="OnSurveyClick" />
-                <Button Content="Show Log" HorizontalAlignment="Right" Click="OnShowLogClick" />
+                <Button Content="Show Log"
+                        HorizontalAlignment="Right"
+                        ToolTip="{x:Static app:ToolTipText.ShowLog}"
+                        Click="OnShowLogClick" />
             </DockPanel>
 
             <Separator Margin="{x:Static app:DesignTokens.SectionGap}" />
 
             <CheckBox Content="Auto-reconnect when the tunnel drops"
                       IsChecked="{Binding AutoReconnect}"
+                      ToolTip="{x:Static app:ToolTipText.AutoReconnect}"
                       Margin="{x:Static app:DesignTokens.RowGap}" />
             <CheckBox x:Name="LaunchAtLogin"
                       Content="Launch at login"
+                      ToolTip="{x:Static app:ToolTipText.LaunchAtLogin}"
                       Margin="{x:Static app:DesignTokens.RowGap}"
                       Checked="OnLaunchAtLoginChanged"
                       Unchecked="OnLaunchAtLoginChanged" />
             <TextBlock x:Name="LoginItemError" Style="{StaticResource ErrorText}" Visibility="Collapsed" />
         </StackPanel>
 
-        <!-- The engine's recent output. -->
+        <!-- The engine's recent output. The scroller sits on a Canvas, which asks for no space of its own, so
+             new lines scroll inside the pane instead of making the window taller. -->
         <Border Margin="{x:Static app:DesignTokens.SectionGap}"
                 MinHeight="{x:Static app:DesignTokens.LogHeight}"
                 BorderThickness="{x:Static app:DesignTokens.HairlineThickness}"
@@ -85,20 +99,51 @@
                 Background="{DynamicResource ControlFillColorDefaultBrush}"
                 CornerRadius="{x:Static app:DesignTokens.ControlCornerRadius}"
                 Padding="{x:Static app:DesignTokens.OutputPadding}">
-            <ScrollViewer x:Name="OutputScroller"
-                          VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled">
-                <ItemsControl ItemsSource="{Binding RecentLines}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding}"
-                                       FontFamily="{x:Static app:DesignTokens.MonospaceFontFamily}"
-                                       FontSize="{x:Static app:DesignTokens.LogFontSize}"
-                                       TextWrapping="Wrap" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+            <Canvas x:Name="OutputCanvas">
+                <ScrollViewer x:Name="OutputScroller"
+                              Width="{Binding ActualWidth, ElementName=OutputCanvas}"
+                              Height="{Binding ActualHeight, ElementName=OutputCanvas}"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding RecentLines}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!-- Colored by what the line reports; only "nothing worked" uses the error color. -->
+                                <TextBlock Text="{Binding Text}"
+                                           FontFamily="{x:Static app:DesignTokens.MonospaceFontFamily}"
+                                           FontSize="{x:Static app:DesignTokens.LogFontSize}"
+                                           TextWrapping="Wrap">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Kind}" Value="{x:Static app:OutputKind.Trying}">
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Kind}" Value="{x:Static app:OutputKind.Connected}">
+                                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Kind}" Value="{x:Static app:OutputKind.Failed}">
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Kind}" Value="{x:Static app:OutputKind.TunnelDown}">
+                                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Kind}" Value="{x:Static app:OutputKind.NothingWorked}">
+                                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Kind}" Value="{x:Static app:OutputKind.Stopped}">
+                                                    <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Canvas>
         </Border>
     </DockPanel>
 </UserControl>

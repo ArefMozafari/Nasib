@@ -39,9 +39,9 @@ public partial class StatusPanel : UserControl
         OutputScroller.ScrollToEnd();
     }
 
-    private void OnFindNowClick(object sender, RoutedEventArgs eventArguments)
+    private void OnFindClick(object sender, RoutedEventArgs eventArguments)
     {
-        Controller.FindNow();
+        Controller.ToggleFind();
     }
 
     private void OnSurveyClick(object sender, RoutedEventArgs eventArguments)
