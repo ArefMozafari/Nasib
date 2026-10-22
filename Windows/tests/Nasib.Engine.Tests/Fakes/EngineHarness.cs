@@ -2,7 +2,7 @@ namespace Nasib.Engine.Tests.Fakes;
 
 /// <summary>
 /// A whole engine wired to fakes in a throwaway folder: a Windscribe log with one datacenter, no bundled list,
-/// and a fake CLI, probe and clock. The Windows counterpart of the sandbox in Tests/Engine/ws-find.test.zsh.
+/// and a fake CLI, probe and clock. The Windows counterpart of the sandbox in macOS/Tests/Engine/ws-find.test.zsh.
 /// </summary>
 internal sealed class EngineHarness : IDisposable
 {

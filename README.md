@@ -125,17 +125,19 @@ Everything Nasib keeps is in `~/.ws-find` on macOS and `%LOCALAPPDATA%\Nasib` on
 
 ### macOS
 
-With Xcode installed:
+Everything for macOS is under `macOS/`: the Swift app, the engine script, and their tests. With Xcode
+installed, from the repository root:
 
 ```bash
-./build.sh install
+./macOS/build.sh install
 ```
 
-That builds `build/Nasib.app`, copies it to `~/Applications` and launches it. `./build.sh` alone
-builds without installing, and `./build.sh release` runs both test suites first, then writes
-`build/Nasib-<version>-macos.zip`.
+That builds `macOS/build/Nasib.app`, copies it to `~/Applications` and launches it. `./macOS/build.sh`
+alone builds without installing, and `./macOS/build.sh release` runs both test suites first, then
+writes `macOS/build/Nasib-<version>-macos.zip`. To run the tests alone:
 
 ```bash
+cd macOS
 swift test
 zsh Tests/Engine/ws-find.test.zsh
 ```
@@ -143,11 +145,15 @@ zsh Tests/Engine/ws-find.test.zsh
 The first runs the app's unit tests. The second runs the engine against stub `windscribe-cli`, `curl`
 and `nc` in a throwaway home folder, so it never touches the real VPN.
 
-The engine works without the app. `Engine/ws-find.sh` with no arguments searches once; it also takes
-`--watch`, `--survey`, `--reach`, `--rank` and `--locations`, each described at the top of the file.
+The engine works without the app. `macOS/Engine/ws-find.sh` with no arguments searches once; it also
+takes `--watch`, `--survey`, `--reach`, `--rank` and `--locations`, each described at the top of the
+file.
 
-`Design/` holds the icon sources: an Icon Composer document for the app icon, which macOS 26 renders as
-Liquid Glass, and one SVG per menu bar state. `build.sh` compiles them; no PNG is exported by hand.
+### Icons
+
+`Design/` at the repository root holds the icon sources both apps use: an Icon Composer document for
+the macOS app icon, which macOS 26 renders as Liquid Glass, and one SVG per menu bar state.
+`macOS/build.sh` compiles them; no PNG is exported by hand.
 
 ### Windows
 
@@ -165,7 +171,7 @@ self-contained `Nasib.exe`. To run the tests alone:
 dotnet test Windows/Nasib.sln
 ```
 
-The engine is a port of `Engine/ws-find.sh` with the same modes, timings and files. Its tests run it
+The engine is a port of `macOS/Engine/ws-find.sh` with the same modes, timings and files. Its tests run it
 against a fake `windscribe-cli` and fake probes, so they never touch the real VPN. The tray glyph and
 the app icon are drawn from the same path data as the SVGs in `Design/`; the build writes the `.exe`
 icon from it with `Windows/tools/Nasib.IconBuilder`.
