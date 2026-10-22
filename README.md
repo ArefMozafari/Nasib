@@ -11,6 +11,10 @@
   <a href="https://github.com/ArefMozafari/Nasib/releases/latest">Download the latest release</a>
 </p>
 
+<p align="center">
+  Works with the <a href="https://windscribe.com">Windscribe</a> desktop app. Not affiliated with Windscribe.
+</p>
+
 ---
 
 Nasib (نصیب, roughly "your share") lives in the macOS menu bar or the Windows notification area. It
