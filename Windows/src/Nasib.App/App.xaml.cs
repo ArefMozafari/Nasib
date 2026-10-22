@@ -17,6 +17,7 @@ public partial class App : Application
 
     private SingleInstance? singleInstance;
     private EngineController? controller;
+    private UpdateChecker? updateChecker;
     private TrayIcon? trayIcon;
     private MainWindow? mainWindow;
     private AboutWindow? aboutWindow;
@@ -47,11 +48,15 @@ public partial class App : Application
             new ReachabilityFilter(new TcpReachabilityProbe(), timings),
             new AttemptLog(paths, TimeProvider.System));
 
-        controller = new EngineController(finder, tunnel, Preferences.Load(paths), paths, cli.ExecutablePath, cli.IsInstalled);
-        mainWindow = new MainWindow(controller, new SettingsViewModel(paths));
-        trayIcon = new TrayIcon(controller, mainWindow, ShowMainWindow, ShowAbout, Quit);
+        var preferences = Preferences.Load(paths);
+        controller = new EngineController(finder, tunnel, preferences, paths, cli.ExecutablePath, cli.IsInstalled);
+        updateChecker = new UpdateChecker(preferences);
+        mainWindow = new MainWindow(controller, updateChecker, new SettingsViewModel(paths));
+        trayIcon = new TrayIcon(controller, updateChecker, mainWindow, ShowMainWindow, ShowAbout, Quit);
         controller.NotificationRequested += trayIcon.ShowNotification;
+        updateChecker.NotificationRequested += trayIcon.ShowNotification;
         controller.Start();
+        updateChecker.Start();
 
         if (!eventArguments.Args.Contains(BackgroundArgument))
         {
@@ -62,6 +67,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs eventArguments)
     {
         trayIcon?.Dispose();
+        updateChecker?.Dispose();
         controller?.Dispose();
         singleInstance?.Dispose();
         base.OnExit(eventArguments);

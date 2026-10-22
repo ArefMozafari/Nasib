@@ -6,13 +6,24 @@
     <!-- The output pane takes whatever height the taller Settings tab leaves, so the tab has no empty gap. -->
     <DockPanel LastChildFill="True">
         <StackPanel DockPanel.Dock="Top">
-            <!-- App name and icon at the top of the Status tab. -->
-            <StackPanel Orientation="Horizontal">
-                <Image Source="{x:Static drawing:AppIconDrawing.ImageSource}"
-                       Width="{x:Static app:DesignTokens.HeaderIconSize}"
-                       Height="{x:Static app:DesignTokens.HeaderIconSize}" />
-                <TextBlock Text="Nasib" Style="{StaticResource TitleText}" Margin="{x:Static app:DesignTokens.InlineGap}" />
-            </StackPanel>
+            <!-- App name and icon at the top of the Status tab. When a newer release exists, its button sits at the
+                 trailing edge of this row, which is already as tall as the icon, so nothing below it moves. -->
+            <DockPanel>
+                <Button x:Name="UpdateButton"
+                        DockPanel.Dock="Right"
+                        VerticalAlignment="Center"
+                        Content="{Binding UpdateButtonTitle}"
+                        Visibility="{Binding HasUpdate, Converter={StaticResource VisibleWhenTrue}}"
+                        Style="{DynamicResource AccentButtonStyle}"
+                        ToolTip="{x:Static app:ToolTipText.UpdateToRelease}"
+                        Click="OnUpdateClick" />
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{x:Static drawing:AppIconDrawing.ImageSource}"
+                           Width="{x:Static app:DesignTokens.HeaderIconSize}"
+                           Height="{x:Static app:DesignTokens.HeaderIconSize}" />
+                    <TextBlock Text="Nasib" Style="{StaticResource TitleText}" Margin="{x:Static app:DesignTokens.InlineGap}" />
+                </StackPanel>
+            </DockPanel>
 
             <DockPanel Margin="{x:Static app:DesignTokens.SectionGap}" LastChildFill="True">
                 <Ellipse DockPanel.Dock="Left"

@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -13,7 +14,7 @@ namespace Nasib.App;
 
 /// <summary>
 /// The waves in the notification area and the menu they open: the app header, the status line,
-/// Open Nasib, Find Now, About Nasib and Quit Nasib.
+/// Open Nasib, Find Now, Update to (when a newer release exists), About Nasib and Quit Nasib.
 /// </summary>
 public sealed class TrayIcon : IDisposable
 {
@@ -31,21 +32,27 @@ public sealed class TrayIcon : IDisposable
     private const int NotificationTimeoutMilliseconds = 5000;
 
     private readonly EngineController controller;
+    private readonly UpdateChecker updateChecker;
     private readonly Window menuOwner;
     private readonly Action showMainWindow;
     private readonly Forms.NotifyIcon notifyIcon;
     private readonly ContextMenu menu;
     private System.Drawing.Icon? currentIcon;
 
-    public TrayIcon(EngineController controller, Window menuOwner, Action showMainWindow, Action showAbout, Action quit)
+    // The page the notification on screen opens when clicked; null opens the window instead.
+    private Uri? notificationPage;
+
+    public TrayIcon(EngineController controller, UpdateChecker updateChecker, Window menuOwner, Action showMainWindow, Action showAbout, Action quit)
     {
         this.controller = controller;
+        this.updateChecker = updateChecker;
         this.menuOwner = menuOwner;
         this.showMainWindow = showMainWindow;
         menu = BuildMenu(showAbout, quit);
         notifyIcon = new Forms.NotifyIcon { Text = ApplicationName };
         notifyIcon.MouseUp += OnMouseUp;
-        notifyIcon.BalloonTipClicked += (_, _) => showMainWindow();
+        notifyIcon.BalloonTipClicked += (_, _) => OnNotificationClicked();
+        notifyIcon.BalloonTipClosed += (_, _) => notificationPage = null;
         controller.PropertyChanged += OnControllerPropertyChanged;
         SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
         UpdateIcon();
@@ -54,6 +61,15 @@ public sealed class TrayIcon : IDisposable
 
     public void ShowNotification(string title, string body)
     {
+        ShowNotification(title, body, page: null);
+    }
+
+    /// <summary>
+    /// Shows a notification that opens the given page when clicked, or the window when there is none.
+    /// </summary>
+    public void ShowNotification(string title, string body, Uri? page)
+    {
+        notificationPage = page;
         notifyIcon.ShowBalloonTip(NotificationTimeoutMilliseconds, title, body, Forms.ToolTipIcon.None);
     }
 
@@ -94,6 +110,12 @@ public sealed class TrayIcon : IDisposable
         findNow.SetBinding(UIElement.IsEnabledProperty, new Binding(nameof(EngineController.CanUseFindButton)));
         findNow.Click += (_, _) => controller.ToggleFind();
 
+        // Shown only when a newer release exists; opens its page in the browser.
+        var update = new MenuItem { DataContext = updateChecker };
+        update.SetBinding(HeaderedItemsControl.HeaderProperty, new Binding(nameof(UpdateChecker.UpdateMenuItemTitle)));
+        update.SetBinding(UIElement.VisibilityProperty, new Binding(nameof(UpdateChecker.HasUpdate)) { Converter = new BooleanToVisibilityConverter() });
+        update.Click += (_, _) => updateChecker.OpenReleasePage();
+
         var about = new MenuItem { Header = "About Nasib" };
         about.Click += (_, _) => showAbout();
 
@@ -107,6 +129,7 @@ public sealed class TrayIcon : IDisposable
         contextMenu.Items.Add(openNasib);
         contextMenu.Items.Add(findNow);
         contextMenu.Items.Add(new Separator());
+        contextMenu.Items.Add(update);
         contextMenu.Items.Add(about);
         contextMenu.Items.Add(quitItem);
         return contextMenu;
@@ -129,6 +152,17 @@ public sealed class TrayIcon : IDisposable
         var handle = new WindowInteropHelper(menuOwner).EnsureHandle();
         NativeMethods.SetForegroundWindow(handle);
         menu.IsOpen = true;
+    }
+
+    private void OnNotificationClicked()
+    {
+        if (notificationPage is null)
+        {
+            showMainWindow();
+            return;
+        }
+        Process.Start(new ProcessStartInfo(notificationPage.AbsoluteUri) { UseShellExecute = true });
+        notificationPage = null;
     }
 
     private void OnControllerPropertyChanged(object? sender, PropertyChangedEventArgs eventArguments)
