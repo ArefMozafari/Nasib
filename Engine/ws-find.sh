@@ -12,6 +12,10 @@ STATE_DIR="$HOME/.ws-find"
 LOG_FILE="$STATE_DIR/log.csv"
 LAST_GOOD_FILE="$STATE_DIR/last_good"
 LOCK_DIR="$STATE_DIR/lock"
+# The lock allows one search at a time, so one fixed file for the probe's result is enough.
+PROBE_STATUS_FILE="$STATE_DIR/probe-status"
+# Process ID of an in-flight blocked-site check, so Stop can kill it.
+PROBE_PID=""
 BLOCKED_PROBE_URL="https://www.youtube.com/generate_204"
 PROBE_TIMEOUT_SECONDS=8
 # The CLI itself waits ~42s per failed attempt; a working combo answers within this.
@@ -89,8 +93,15 @@ disconnect_and_wait() {
 tunnel_works() {
   windscribe-cli status 2>/dev/null | grep -q 'Connect state: Connected' || return 1
   local status_code
-  # --noproxy keeps the probe off any system proxy such as V2rayN.
-  status_code=$(curl --noproxy '*' -m "$PROBE_TIMEOUT_SECONDS" -s -o /dev/null -w '%{http_code}' "$BLOCKED_PROBE_URL")
+  # --noproxy keeps the probe off any system proxy such as V2rayN. The request runs in the background
+  # behind `wait`, which a trapped Stop interrupts at once; a foreground curl would delay it up to 8 s.
+  curl --noproxy '*' -m "$PROBE_TIMEOUT_SECONDS" -s -o /dev/null -w '%{http_code}' "$BLOCKED_PROBE_URL" \
+    >"$PROBE_STATUS_FILE" &
+  PROBE_PID=$!
+  wait "$PROBE_PID"
+  PROBE_PID=""
+  status_code=$(<"$PROBE_STATUS_FILE")
+  rm -f "$PROBE_STATUS_FILE"
   [[ "$status_code" == "204" ]]
 }
 
@@ -115,6 +126,7 @@ try_combo() {
     return 0
   fi
   echo "$(date +%FT%T),$location,$protocol,fail" >>"$LOG_FILE"
+  echo "failed: $location / $protocol"
   disconnect_and_wait
   return 1
 }
@@ -212,20 +224,47 @@ case "${1:-}" in
     exit 0 ;;
 esac
 
+abort_probe() {
+  [[ -n "$PROBE_PID" ]] && kill "$PROBE_PID" 2>/dev/null
+  rm -f "$PROBE_STATUS_FILE"
+}
+
+# Stop during a find: abandon the attempt without logging it and leave the tunnel down. Reconnecting
+# would usually retry the server whose failure started the search.
+stop_search() {
+  abort_probe
+  echo "search stopped"
+  disconnect_and_wait
+  exit 130
+}
+
+# Stop during a survey: the tunnel is in whatever state the last attempt left it, so put the user back
+# on the last server that worked. The lock is released first because reconnecting runs a full attempt.
+stop_survey() {
+  abort_probe
+  echo "survey stopped"
+  rmdir "$LOCK_DIR" 2>/dev/null
+  trap - EXIT
+  disconnect_and_wait
+  reconnect_last_good
+  exit 130
+}
+
 # One search at a time; the watcher fires every minute and a search takes longer than that.
 mkdir "$LOCK_DIR" 2>/dev/null || { echo "search already running"; exit 0; }
 trap 'rmdir "$LOCK_DIR" 2>/dev/null' EXIT
 
 case "${1:-}" in
   --watch)
+    trap stop_search INT
     tunnel_works && exit 0
     echo "tunnel down"
     notify "Tunnel down, searching..."
     search ;;
   --survey)
-    # Ctrl-C mid-survey leaves the tunnel in whatever state the last attempt left it; put the user back online.
-    trap 'echo; echo "survey stopped"; rmdir "$LOCK_DIR"; trap - EXIT; disconnect_and_wait; reconnect_last_good; exit 130' INT
+    trap stop_survey INT
     search survey ;;
   *)
+    trap stop_search INT
     search ;;
 esac
