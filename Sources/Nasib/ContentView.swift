@@ -29,12 +29,12 @@ extension Engine.State {
         }
     }
 
-    var symbolName: String {
+    /// Name of the glyph PNG pair in the bundle; unknown shows as searching until the first status read lands.
+    var glyphName: String {
         switch self {
-        case .unknown: "questionmark.circle"
-        case .down: "xmark.shield"
-        case .searching: "arrow.triangle.2.circlepath"
-        case .connected: "checkmark.shield.fill"
+        case .unknown, .searching: "MenuBarSearching"
+        case .down: "MenuBarDown"
+        case .connected: "MenuBarConnected"
         }
     }
 }

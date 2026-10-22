@@ -17,7 +17,7 @@ struct NasibApp: App {
         MenuBarExtra {
             MenuBarMenu().environmentObject(engine)
         } label: {
-            Image(systemName: engine.state.symbolName)
+            Image(nsImage: MenuBarGlyph.image(named: engine.state.glyphName))
         }
     }
 }

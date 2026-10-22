@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36">
+  <!-- Each wave spans x 6..30 (center 18); the three sit at y 11/18/25 (center 18). -->
+  <g fill="none" stroke="#000000" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 3">
+    <path d="M6 11 C 10 8.5, 14 8.5, 18 11 S 26 13.5, 30 11"/>
+    <path d="M6 18 C 10 15.5, 14 15.5, 18 18 S 26 20.5, 30 18"/>
+    <path d="M6 25 C 10 22.5, 14 22.5, 18 25 S 26 27.5, 30 25"/>
+  </g>
+  
+</svg>
