@@ -32,3 +32,12 @@ records each result without stopping), Show Log, and toggles for auto-reconnect 
 Closing the window keeps the app in the menu bar; quit from there.
 
 Cities to search are the `CITIES` list in `Engine/ws-find.sh`.
+
+## Icons
+
+`Design/AppIcon.icon` is an Icon Composer document (open it in Xcode's Icon Composer): a blue gradient
+fill with one glass layer, `Assets/waves.svg`. `build.sh` compiles it with `actool` into `Assets.car`,
+which macOS 26 and later render as Liquid Glass with light, dark and tinted variants, plus an `.icns`
+fallback for macOS 15. `Design/MenuBar*.svg` are the three menu bar glyphs (connected, searching, down),
+rendered by `Tools/render-svg.swift` into 18-point PNG pairs. Edit the sources and rebuild; never
+hand-export a PNG.
