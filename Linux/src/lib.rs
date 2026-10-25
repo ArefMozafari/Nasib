@@ -18,5 +18,6 @@ pub mod login_item;
 pub mod notifier;
 pub mod output_parser;
 pub mod preferences;
+pub mod reorder;
 pub mod text;
 pub mod update_checker;
