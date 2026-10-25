@@ -1,0 +1,113 @@
+# Builds Nasib for macOS, Windows and Linux and drafts a GitHub release with every download.
+#   Pushing a tag such as v1.0.0 builds all three and drafts the release; publishing it stays manual.
+#   A pull request that changes this file builds all three without drafting anything, so the workflow is
+#   checked before it's relied on.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths: [".github/workflows/release.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    name: Check the version
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      # The three apps keep their own version file; a release needs all three, and the tag, to agree.
+      - id: read
+        run: |
+          linux=$(sed -n 's/^version = "\(.*\)"/\1/p' Linux/Cargo.toml | head -1)
+          macos=$(grep -A1 CFBundleShortVersionString macOS/Packaging/Info.plist | sed -n 's/.*<string>\(.*\)<\/string>.*/\1/p')
+          windows=$(sed -n 's/.*<Version>\(.*\)<\/Version>.*/\1/p' Windows/Directory.Build.props)
+          echo "macOS $macos, Windows $windows, Linux $linux"
+          if [ "$macos" != "$linux" ] || [ "$windows" != "$linux" ]; then
+            echo "::error::The app versions differ: macOS $macos, Windows $windows, Linux $linux."
+            exit 1
+          fi
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "v$linux" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} doesn't match version $linux."
+            exit 1
+          fi
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ ! -f "docs/releases/$linux.md" ]; then
+            echo "::error::docs/releases/$linux.md is missing."
+            exit 1
+          fi
+          echo "version=$linux" >> "$GITHUB_OUTPUT"
+
+  macos:
+    name: macOS
+    needs: version
+    # Xcode 26 or later compiles the Icon Composer app icon.
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+      - run: rustup target add aarch64-apple-darwin
+      - run: ./macOS/build.sh release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: macOS/build/Nasib-*-macos.zip
+          if-no-files-found: error
+
+  windows:
+    name: Windows
+    needs: version
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+      - run: rustup target add x86_64-pc-windows-msvc
+      - run: ./Windows/build.ps1
+        shell: pwsh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: Windows/build/Nasib-*-win-x64.zip
+          if-no-files-found: error
+
+  linux:
+    name: Linux
+    needs: version
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: ./Linux/build.sh release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: Linux/build/Nasib-*-linux-x64.*
+          if-no-files-found: error
+
+  release:
+    name: Draft the release
+    if: github.ref_type == 'tag'
+    needs: [version, macos, windows, linux]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          path: downloads
+          merge-multiple: true
+      # The notes come from docs/releases/<version>.md, with every download's checksum added below them.
+      - run: |
+          version="${{ needs.version.outputs.version }}"
+          cp "docs/releases/$version.md" notes.md
+          printf '\n**SHA-256**\n' >> notes.md
+          for file in downloads/*; do
+            printf -- '- `%s`: `%s`\n' "$(basename "$file")" "$(sha256sum "$file" | cut -d' ' -f1)" >> notes.md
+          done
+          gh release create "${GITHUB_REF_NAME}" downloads/* --draft --verify-tag \
+            --title "Nasib $version" --notes-file notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}
