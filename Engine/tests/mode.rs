@@ -26,6 +26,7 @@ mod parse {
             ("--rank", Mode::Rank),
             ("--locations", Mode::Locations),
             ("--status", Mode::Status),
+            ("--catalog", Mode::Catalog),
         ];
         for (flag, expected) in cases {
             assert_eq!(parse(&[flag]), Ok(expected), "{flag}");

@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+"""Regenerates Engine/src/datacenters.json from Windscribe's public server list.
+
+Run it by hand before a release, from anywhere: python3 -I Engine/tools/update-datacenters
+The engine never fetches the list itself, since the request may be blocked exactly where Nasib is needed.
+The result is reviewed in the diff like any other change.
+"""
+
+import json
+import pathlib
+import urllib.request
+
+SERVER_LIST_URL = "https://assets.windscribe.com/serverlist/mob-v2/1/321321321"
+REQUEST_TIMEOUT_SECONDS = 30
+OUTPUT_PATH = pathlib.Path(__file__).resolve().parent.parent / "src" / "datacenters.json"
+
+
+def fetch_server_list():
+    with urllib.request.urlopen(SERVER_LIST_URL, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+        return json.load(response)
+
+
+def datacenters_from(server_list):
+    """Keeps the region, country, city, nickname and each node's first address, in the list's order."""
+    datacenters = []
+    for region in server_list["data"]:
+        for group in region["groups"]:
+            addresses = [node["ip"] for node in group.get("nodes", []) if node.get("ip")]
+            datacenters.append(
+                {
+                    "region": region["name"],
+                    "countryCode": region["country_code"],
+                    "city": group["city"],
+                    "nickname": group["nick"],
+                    "addresses": addresses,
+                }
+            )
+    return datacenters
+
+
+def render(revision, datacenters):
+    """One datacenter per line, so a refresh reads as a short diff."""
+    lines = [json.dumps(datacenter, ensure_ascii=False) for datacenter in datacenters]
+    body = ",\n    ".join(lines)
+    return (
+        "{\n"
+        f'  "source": {json.dumps(SERVER_LIST_URL)},\n'
+        f'  "revision": {revision},\n'
+        '  "datacenters": [\n'
+        f"    {body}\n"
+        "  ]\n"
+        "}\n"
+    )
+
+
+def main():
+    server_list = fetch_server_list()
+    datacenters = datacenters_from(server_list)
+    nicknames = [datacenter["nickname"] for datacenter in datacenters]
+    if len(set(nicknames)) != len(nicknames):
+        raise SystemExit("the server list repeats a nickname; the engine needs them unique")
+    OUTPUT_PATH.write_text(render(server_list["info"]["revision"], datacenters), encoding="utf-8")
+    regions = {datacenter["region"] for datacenter in datacenters}
+    cities = {datacenter["city"] for datacenter in datacenters}
+    print(f"wrote {len(datacenters)} datacenters in {len(cities)} cities and {len(regions)} regions to {OUTPUT_PATH}")
+
+
+if __name__ == "__main__":
+    main()

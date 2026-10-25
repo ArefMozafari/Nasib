@@ -3,12 +3,22 @@ import SwiftUI
 /// Sizing and spacing tokens for the main window and the menu.
 enum Layout {
     static let windowWidth: CGFloat = 360
+    /// Settings is wider, so the two location lists sit side by side instead of stacking.
+    static let settingsWindowWidth: CGFloat = 620
     static let sectionSpacing: CGFloat = 16
     static let rowSpacing: CGFloat = 8
+    /// The space inside a Settings group box, between its edge and the section's content.
+    static let groupPadding: CGFloat = 8
     static let padding: CGFloat = 20
     static let statusDotSize: CGFloat = 10
     static let logHeight: CGFloat = 140
-    static let citiesEditorHeight: CGFloat = 120
+    /// Space around each log line, so its stripe reads as a row.
+    static let logLinePadding: CGFloat = 4
+    static let logLineVerticalPadding: CGFloat = 2
+    static let locationListsHeight: CGFloat = 300
+    /// The search field above each location list, and the line below it: the ranking switch on one side,
+    /// the count on the other.
+    static let columnControlHeight: CGFloat = 22
     static let protocolListHeight: CGFloat = 190
     static let headerIconSize: CGFloat = 32
     static let menuIconSize: CGFloat = 16
@@ -151,6 +161,7 @@ extension OutputTone {
         case .error: .red
         case .accent: .accentColor
         case .detail: Color(nsColor: .tertiaryLabelColor)
+        case .phase: .teal
         }
     }
 }
@@ -166,6 +177,15 @@ struct RecentOutput: View {
                         Text(line)
                             .font(.caption.monospaced())
                             .foregroundStyle(EngineOutputParser.parse(line: line).tone.color)
+                            .padding(.horizontal, Layout.logLinePadding)
+                            .padding(.vertical, Layout.logLineVerticalPadding)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            // macOS's own alternating row color, as in Finder lists, so light and dark mode both fit.
+                            .background(
+                                Engine.isStriped(index: index, droppedLineCount: engine.droppedLineCount)
+                                    ? Color(nsColor: NSColor.alternatingContentBackgroundColors[1])
+                                    : Color.clear
+                            )
                             .id(index)
                     }
                 }
@@ -199,20 +219,31 @@ struct StatusTab: View {
 }
 
 struct ContentView: View {
+    private enum Tab {
+        case status
+        case settings
+    }
+
+    @State private var tab = Tab.status
+
     var body: some View {
-        TabView {
+        TabView(selection: $tab) {
             // Both tabs pin to the top; the window takes the taller tab's height and would otherwise center the shorter one.
             StatusTab()
                 .padding(Layout.padding)
                 .frame(maxHeight: .infinity, alignment: .top)
                 .tabItem { Text("Status") }
+                .tag(Tab.status)
             SettingsView()
                 .padding(Layout.padding)
                 .frame(maxHeight: .infinity, alignment: .top)
                 .tabItem { Text("Settings") }
+                .tag(Tab.settings)
         }
         .padding(Layout.padding)
-        .frame(width: Layout.windowWidth)
+        .frame(width: tab == .settings ? Layout.settingsWindowWidth : Layout.windowWidth)
+        // The window takes the content's own height, so a size saved by an older, taller layout can't stretch it.
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 

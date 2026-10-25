@@ -95,4 +95,19 @@ final class EngineOutputParserTests: XCTestCase {
     func testShouldReturnNilStatusForEmptyOutput() {
         XCTAssertNil(EngineOutputParser.parseStatus(line: ""))
     }
+
+    func testShouldParsePhaseLine() {
+        XCTAssertEqual(EngineOutputParser.parse(line: "phase: tcp on port 443"), .phase("tcp on port 443"))
+    }
+
+    func testShouldKeepThePortInTryingLine() {
+        XCTAssertEqual(
+            EngineOutputParser.parse(line: "trying: The 6 / tcp:443"),
+            .trying(location: "The 6", protocolName: "tcp:443")
+        )
+    }
+
+    func testShouldGivePhasesTheirTone() {
+        XCTAssertEqual(EngineEvent.phase("reachability").tone, .phase)
+    }
 }

@@ -29,12 +29,14 @@ pub enum EngineEvent {
     SearchAlreadyRunning,
     /// The Windscribe CLI is not at its expected path.
     CliMissing(PathBuf),
+    /// A stage of the search starts, such as "reachability" or "tcp on port 443".
+    Phase(String),
     /// Any other progress line, such as the order the search will try things in.
     Message(String),
 }
 
 fn pair_text(prefix: &str, pair: &ServerPair) -> String {
-    format!("{prefix}{}{PAIR_SEPARATOR}{}", pair.nickname, pair.protocol)
+    format!("{prefix}{}{PAIR_SEPARATOR}{}", pair.nickname, pair.label())
 }
 
 impl EngineEvent {
@@ -50,6 +52,7 @@ impl EngineEvent {
             EngineEvent::TunnelDown => "tunnel down".to_string(),
             EngineEvent::SearchAlreadyRunning => "search already running".to_string(),
             EngineEvent::CliMissing(path) => format!("windscribe-cli missing: {}", path.display()),
+            EngineEvent::Phase(phase) => format!("phase: {phase}"),
             EngineEvent::Message(message) => message.clone(),
         }
     }

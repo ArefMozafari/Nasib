@@ -93,4 +93,27 @@ final class EngineConfigTests: XCTestCase {
     func testShouldDefaultToEveryProtocol() {
         XCTAssertEqual(EngineConfig.default.protocols, EngineConfig.allProtocols)
     }
+
+    func testShouldRoundTripLocationsAndRanking() throws {
+        var config = EngineConfig.default
+        config.locations = ["The 6", "Khalifa"]
+        config.rankBySuccess = false
+        try config.save(to: directory)
+        XCTAssertEqual(EngineConfig.load(from: directory), config)
+    }
+
+    func testShouldDefaultRankingOnWhenMissing() throws {
+        try #"{ "cities": ["Dubai"], "protocolOrder": ["tcp"] }"#.write(to: jsonFile, atomically: true, encoding: .utf8)
+        let config = EngineConfig.load(from: directory)
+        XCTAssertTrue(config.rankBySuccess)
+        XCTAssertNil(config.locations)
+        XCTAssertEqual(config.cities, ["Dubai"])
+    }
+
+    func testShouldDefaultToCarryingOverTheDefaultCities() {
+        XCTAssertNil(EngineConfig.default.locations)
+        XCTAssertEqual(EngineConfig.default.cities, EngineConfig.defaultCities)
+        XCTAssertEqual(EngineConfig.defaultLocations.count, 20)
+        XCTAssertEqual(EngineConfig.defaultLocations.first, "Lygos")
+    }
 }

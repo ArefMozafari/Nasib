@@ -3,6 +3,7 @@ mod support;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
+use nasib_engine::attempt_log::ServerPair;
 use nasib_engine::stop::StopSignal;
 use nasib_engine::timings::Timings;
 use nasib_engine::tunnel::Tunnel;
@@ -14,6 +15,14 @@ const TIME_SCALE: f64 = 1000.0;
 const SETTLE_TIME_SCALE: f64 = 10.0;
 const CONNECT_POLLS: usize = 10;
 const DISCONNECT_POLLS: usize = 15;
+
+fn pair(nickname: &str, protocol: &str, port: Option<u16>) -> ServerPair {
+    ServerPair {
+        nickname: nickname.to_string(),
+        protocol: protocol.to_string(),
+        port,
+    }
+}
 
 fn create() -> (Tunnel, Arc<FakeCli>, Arc<FakeBlockedSiteProbe>) {
     let cli = FakeCli::new();
@@ -75,7 +84,7 @@ mod connect {
         cli.with(|state| state.state = FakeTunnelState::Connected);
 
         tunnel
-            .connect("Khalifa", "ikev2", &StopSignal::new())
+            .connect(&pair("Khalifa", "ikev2", None), &StopSignal::new())
             .unwrap();
 
         assert_eq!(cli.count_calls(DISCONNECT_CALL), 1);
@@ -88,7 +97,7 @@ mod connect {
         cli.with(|state| state.state = FakeTunnelState::Error);
 
         tunnel
-            .connect("Khalifa", "ikev2", &StopSignal::new())
+            .connect(&pair("Khalifa", "ikev2", None), &StopSignal::new())
             .unwrap();
 
         assert_eq!(cli.count_calls(DISCONNECT_CALL), 0);
@@ -99,7 +108,7 @@ mod connect {
         let (tunnel, cli, _) = create();
 
         tunnel
-            .connect("Khalifa", "ikev2", &StopSignal::new())
+            .connect(&pair("Khalifa", "ikev2", None), &StopSignal::new())
             .unwrap();
 
         assert_eq!(cli.status_reads_after_last("connect "), 1);
@@ -111,7 +120,7 @@ mod connect {
         cli.with(|state| state.pair_connects = Box::new(|_, _| false));
 
         tunnel
-            .connect("Khalifa", "ikev2", &StopSignal::new())
+            .connect(&pair("Khalifa", "ikev2", None), &StopSignal::new())
             .unwrap();
 
         assert_eq!(cli.status_reads_after_last("connect "), CONNECT_POLLS);
@@ -126,7 +135,7 @@ mod connect {
         let started = std::time::Instant::now();
 
         tunnel
-            .connect("Khalifa", "ikev2", &StopSignal::new())
+            .connect(&pair("Khalifa", "ikev2", None), &StopSignal::new())
             .unwrap();
 
         assert!(started.elapsed() >= timings.status_poll_interval + timings.settle_delay);
@@ -137,10 +146,21 @@ mod connect {
         let (tunnel, cli, _) = create();
 
         tunnel
-            .connect("Stolen Cheese", "wstunnel", &StopSignal::new())
+            .connect(&pair("Stolen Cheese", "wstunnel", None), &StopSignal::new())
             .unwrap();
 
         assert_eq!(cli.connect_calls(), ["connect Stolen Cheese wstunnel"]);
+    }
+
+    #[test]
+    fn should_pass_the_port_to_the_cli() {
+        let (tunnel, cli, _) = create();
+
+        tunnel
+            .connect(&pair("The 6", "tcp", Some(587)), &StopSignal::new())
+            .unwrap();
+
+        assert_eq!(cli.connect_calls(), ["connect The 6 tcp:587"]);
     }
 
     #[test]
@@ -149,7 +169,9 @@ mod connect {
         let stop = StopSignal::new();
         stop.request();
 
-        assert!(tunnel.connect("Khalifa", "ikev2", &stop).is_err());
+        assert!(tunnel
+            .connect(&pair("Khalifa", "ikev2", None), &stop)
+            .is_err());
         assert!(cli.connect_calls().len() <= 1);
     }
 }
@@ -176,6 +198,23 @@ mod works {
         probe.set_loads_through(|_| true);
 
         assert_eq!(tunnel.works(&StopSignal::new()), Ok(true));
+    }
+}
+
+mod ports {
+    use super::*;
+
+    #[test]
+    fn should_read_a_protocols_ports_from_the_cli() {
+        let (tunnel, cli, _) = create();
+        cli.with(|state| {
+            state
+                .ports_by_protocol
+                .insert("tcp".to_string(), "443, 587\n".to_string());
+        });
+
+        assert_eq!(tunnel.ports("tcp"), vec![443, 587]);
+        assert!(tunnel.ports("udp").is_empty());
     }
 }
 

@@ -27,6 +27,8 @@ pub struct TunnelStatus {
     pub location: Option<String>,
     /// The protocol as the CLI names it, without the port, such as "IKEv2".
     pub protocol: Option<String>,
+    /// The port after the protocol, such as 500 in "IKEv2:500".
+    pub port: Option<u16>,
 }
 
 /// Splits "Connected: Amsterdam - Stolen Cheese" or "Error: 11" into the state and the text after it.
@@ -52,6 +54,7 @@ impl TunnelStatus {
             state: ConnectState::Unknown,
             location: None,
             protocol: None,
+            port: None,
         };
         for line in output.lines().map(str::trim) {
             if let Some(value) = line.strip_prefix(CONNECT_STATE_PREFIX) {
@@ -63,10 +66,12 @@ impl TunnelStatus {
                     None
                 };
             } else if let Some(value) = line.strip_prefix(PROTOCOL_PREFIX) {
-                status.protocol = value
-                    .split(PROTOCOL_PORT_SEPARATOR)
-                    .next()
-                    .map(String::from);
+                let (protocol, port) = match value.split_once(PROTOCOL_PORT_SEPARATOR) {
+                    Some((protocol, port)) => (protocol, port.trim().parse().ok()),
+                    None => (value, None),
+                };
+                status.protocol = Some(protocol.to_string());
+                status.port = port;
             }
         }
         status

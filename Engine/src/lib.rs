@@ -4,6 +4,7 @@
 pub mod attempt_log;
 pub mod blocked_site;
 pub mod catalog;
+pub mod catalog_output;
 pub mod client_log;
 pub mod configuration;
 pub mod datacenter;

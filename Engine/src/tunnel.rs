@@ -3,11 +3,12 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::attempt_log::ServerPair;
 use crate::blocked_site::BlockedSiteProbe;
 use crate::stop::{StopSignal, Stopped};
 use crate::timings::Timings;
 use crate::tunnel_status::TunnelStatus;
-use crate::windscribe_cli::WindscribeCli;
+use crate::windscribe_cli::{parse_ports, WindscribeCli};
 
 pub struct Tunnel {
     cli: Arc<dyn WindscribeCli>,
@@ -32,6 +33,11 @@ impl Tunnel {
         TunnelStatus::parse(&self.cli.read_status())
     }
 
+    /// The protocol's ports as the CLI lists them, default first; empty when it lists none.
+    pub fn ports(&self, protocol: &str) -> Vec<u16> {
+        parse_ports(&self.cli.ports(protocol))
+    }
+
     /// Disconnects and waits until the CLI reports Disconnected or an error. The app ignores a connect
     /// issued while it is still tearing down the previous tunnel, and it keeps reporting an error such as
     /// "Error: 11" after a failed connect, so an error ends the wait too. Returns false when time runs out.
@@ -51,19 +57,14 @@ impl Tunnel {
     /// Tears down any tunnel first, since the app drops a connect issued while one is up, then starts a
     /// non-blocking connect and polls, so a dead pair costs the connect timeout instead of the CLI's own
     /// 42 seconds. Ends with the settle delay, because the CLI can report Connected and drop seconds later.
-    pub fn connect(
-        &self,
-        nickname: &str,
-        protocol: &str,
-        stop: &StopSignal,
-    ) -> Result<(), Stopped> {
+    pub fn connect(&self, pair: &ServerPair, stop: &StopSignal) -> Result<(), Stopped> {
         if !self.read_status().is_down() {
             self.disconnect_and_wait(stop)?;
         }
         if stop.is_requested() {
             return Err(Stopped);
         }
-        self.cli.connect(nickname, protocol);
+        self.cli.connect(&pair.nickname, &pair.protocol, pair.port);
         let mut waited = Duration::ZERO;
         while waited < self.timings.connect_timeout {
             stop.wait(self.timings.status_poll_interval)?;

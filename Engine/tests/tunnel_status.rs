@@ -6,6 +6,19 @@ mod parse {
     use super::*;
 
     #[test]
+    fn should_read_the_port_from_the_status() {
+        assert_eq!(TunnelStatus::parse(CONNECTED_OUTPUT).port, Some(500));
+    }
+
+    #[test]
+    fn should_read_no_port_without_a_protocol_line() {
+        assert_eq!(
+            TunnelStatus::parse("Connect state: Disconnected\n").port,
+            None
+        );
+    }
+
+    #[test]
     fn should_parse_a_connected_status_with_the_protocol_port_stripped() {
         let status = TunnelStatus::parse(CONNECTED_OUTPUT);
 

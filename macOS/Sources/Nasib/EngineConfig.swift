@@ -1,7 +1,7 @@
 import Foundation
 
-/// Which cities to search and which protocols to try, in order, saved in ~/.ws-find/config.json for the
-/// engine to read. Every Nasib app writes the same format.
+/// Which datacenters to search and which protocols to try, in order, saved in ~/.ws-find/config.json for
+/// the engine to read. Every Nasib app writes the same format; Engine/README.md describes it.
 struct EngineConfig: Equatable, Codable {
     static let allProtocols = ["wireguard", "ikev2", "tcp", "stealth", "wstunnel", "udp"]
     static let defaultCities = [
@@ -9,6 +9,14 @@ struct EngineConfig: Equatable, Codable {
         "Toronto", "Montreal", "Winnipeg", "New York", "Chicago", "Atlanta",
         "Bratislava", "Helsinki", "Brussels",
     ]
+    /// The engine's default locations, in the same order: the 20 datacenters Nasib searched before every
+    /// datacenter was bundled.
+    static let defaultLocations = [
+        "Lygos", "Khalifa", "Vitoshka", "Nevski", "Fika", "Djurgarden", "Stolen Cheese", "Wurstchen",
+        "Sausage Party", "Altstadt", "The 6", "Bagel Poutine", "The Forks", "Inside Job", "Green Mill",
+        "Magic City", "Devin Castle", "Sauna", "Tram", "Guildhouse",
+    ]
+    /// No saved locations, so the engine carries over the default cities, as an untouched install does.
     static let `default` = EngineConfig(cities: defaultCities, protocols: allProtocols)
 
     private static let fileName = "config.json"
@@ -19,12 +27,34 @@ struct EngineConfig: Equatable, Codable {
     private static let singleQuote: Character = "'"
     private static let escapedSingleQuote = "'\\''"
 
+    /// What older versions saved instead of locations; the engine falls back to it when locations is nil.
     var cities: [String]
     var protocols: [String]
+    /// The datacenters to search, by nickname, in order. Nil for a file saved before locations existed.
+    var locations: [String]?
+    var rankBySuccess: Bool
 
     private enum CodingKeys: String, CodingKey {
         case cities
         case protocols = "protocolOrder"
+        case locations
+        case rankBySuccess
+    }
+
+    init(cities: [String], protocols: [String], locations: [String]? = nil, rankBySuccess: Bool = true) {
+        self.cities = cities
+        self.protocols = protocols
+        self.locations = locations
+        self.rankBySuccess = rankBySuccess
+    }
+
+    /// A file without the newer keys still decodes: ranking defaults to on, and cities to the defaults.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        protocols = try container.decode([String].self, forKey: .protocols)
+        locations = try container.decodeIfPresent([String].self, forKey: .locations)
+        rankBySuccess = try container.decodeIfPresent(Bool.self, forKey: .rankBySuccess) ?? true
+        cities = try container.decodeIfPresent([String].self, forKey: .cities) ?? Self.defaultCities
     }
 
     /// Keeps only protocols the engine knows, each once, in the order given.
@@ -89,7 +119,9 @@ struct EngineConfig: Equatable, Codable {
               let stored = try? JSONDecoder().decode(EngineConfig.self, from: data) else {
             return .default
         }
-        return EngineConfig(cities: stored.cities, protocols: knownProtocols(stored.protocols))
+        var config = stored
+        config.protocols = knownProtocols(stored.protocols)
+        return config
     }
 
     func save(to directory: URL = Engine.stateDirectory) throws {

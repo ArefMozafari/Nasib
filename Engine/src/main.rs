@@ -10,6 +10,7 @@ use std::thread;
 use nasib_engine::attempt_log::{AttemptLog, SystemClock};
 use nasib_engine::blocked_site::{HttpBlockedSiteProbe, DEFAULT_PROBE_URL};
 use nasib_engine::catalog;
+use nasib_engine::catalog_output;
 use nasib_engine::configuration::Configuration;
 use nasib_engine::events::EngineEvent;
 use nasib_engine::finder::{Finder, Outcome};
@@ -28,7 +29,7 @@ const PROBE_URL_VARIABLE: &str = "NASIB_PROBE_URL";
 /// The line an app writes to standard input to stop a run.
 const STOP_LINE: &str = "stop";
 const USAGE: &str =
-    "usage: nasib-engine [--watch | --survey | --reach | --rank | --locations | --status]";
+    "usage: nasib-engine [--watch | --survey | --reach | --rank | --locations | --status | --catalog]";
 
 const SUCCESS_EXIT_CODE: u8 = 0;
 const FAILURE_EXIT_CODE: u8 = 1;
@@ -79,7 +80,7 @@ fn run_search(mode: Mode, paths: Paths, cli: Arc<dyn WindscribeCli>, timings: Ti
     );
     let finder = Finder::new(
         paths.clone(),
-        catalog::seed(),
+        catalog::bundled(),
         tunnel,
         Arc::new(TcpReachabilityProbe::new(REACH_PORT, timings.reach_timeout)),
         AttemptLog::new(paths, Box::new(SystemClock)),
@@ -98,7 +99,7 @@ fn run_search(mode: Mode, paths: Paths, cli: Arc<dyn WindscribeCli>, timings: Ti
 /// Prints `--locations`, `--reach` or `--rank`, which read files and probe but never touch the tunnel.
 fn run_listing(mode: Mode, paths: &Paths, timings: Timings) -> u8 {
     let configuration = Configuration::load(&paths.configuration_file());
-    let datacenters = catalog::load(&configuration, &paths.windscribe_log_directory);
+    let datacenters = configuration.select(&catalog::load(&paths.windscribe_log_directory));
     match mode {
         Mode::Locations => {
             for datacenter in &datacenters {
@@ -148,6 +149,13 @@ fn main() -> ExitCode {
         }
     };
     let paths = Paths::for_current_user();
+    // The catalog needs no CLI, so Settings can list locations before Windscribe is installed.
+    if mode == Mode::Catalog {
+        print_line(&catalog_output::render(&catalog::load(
+            &paths.windscribe_log_directory,
+        )));
+        return ExitCode::from(SUCCESS_EXIT_CODE);
+    }
     let cli = ProcessWindscribeCli::new(paths.windscribe_cli.clone());
     if !cli.is_installed() {
         print_line(&EngineEvent::CliMissing(paths.windscribe_cli.clone()).text());
@@ -161,6 +169,8 @@ fn main() -> ExitCode {
         }
         Mode::Find | Mode::Watch | Mode::Survey => run_search(mode, paths, Arc::new(cli), timings),
         Mode::Reach | Mode::Rank | Mode::Locations => run_listing(mode, &paths, timings),
+        // Already printed above, before the CLI check.
+        Mode::Catalog => SUCCESS_EXIT_CODE,
     };
     ExitCode::from(code)
 }

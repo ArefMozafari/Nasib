@@ -7,11 +7,30 @@ fn pair(nickname: &str, protocol: &str) -> ServerPair {
     ServerPair {
         nickname: nickname.to_string(),
         protocol: protocol.to_string(),
+        port: None,
     }
 }
 
 mod text {
     use super::*;
+
+    #[test]
+    fn should_print_the_port_after_the_protocol() {
+        let pair = ServerPair {
+            port: Some(443),
+            ..pair("The 6", "tcp")
+        };
+
+        assert_eq!(
+            EngineEvent::Trying(pair.clone()).text(),
+            "trying: The 6 / tcp:443"
+        );
+        assert_eq!(
+            EngineEvent::Connected(pair.clone()).text(),
+            "connected: The 6 / tcp:443"
+        );
+        assert_eq!(EngineEvent::Failed(pair).text(), "failed: The 6 / tcp:443");
+    }
 
     #[test]
     fn should_print_the_output_contract_lines() {
