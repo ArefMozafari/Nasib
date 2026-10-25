@@ -7,7 +7,7 @@
 <p align="center">Keeps Windscribe connected from networks that block most of it.</p>
 
 <p align="center">
-  <b>macOS</b> 15 or later, Apple silicon &nbsp;·&nbsp; <b>Windows</b> 10 and 11, x64<br>
+  <b>macOS</b> 15 or later, Apple silicon &nbsp;·&nbsp; <b>Windows</b> 10 and 11, x64 &nbsp;·&nbsp; <b>Linux</b> x64 (preview)<br>
   <a href="https://github.com/ArefMozafari/Nasib/releases/latest">Download the latest release</a>
 </p>
 
@@ -17,7 +17,8 @@
 
 ---
 
-Nasib (نصیب, roughly "your share") lives in the macOS menu bar or the Windows notification area. It
+Nasib (نصیب, roughly "your share") lives in the macOS menu bar, the Windows notification area or the
+Linux tray. It
 finds a Windscribe datacenter and protocol that actually carries traffic right now, connects to it,
 and does it again when the tunnel dies.
 
@@ -92,6 +93,27 @@ The output pane shows each stage of a search as it starts, and the port of every
   <img src="docs/images/windows-tray-menu.png" width="166" alt="Windows tray menu: Nasib, the status line, Open Nasib, Find Now, About Nasib and Quit Nasib">
 </p>
 
+### Linux (preview)
+
+The Linux app is new in 1.0.0 and hasn't been tested on a real Windscribe connection yet. Reports are
+welcome in [issues](https://github.com/ArefMozafari/Nasib/issues).
+
+- **Needs:** an x64 desktop with GTK 4.6 or later (Ubuntu 22.04, Debian 12, Fedora 38, Linux Mint 21
+  or newer), and Windscribe's Linux app, logged in. Nasib drives its command-line tool,
+  `/usr/bin/windscribe-cli`.
+- **Install:** download one of these from the
+  [latest release](https://github.com/ArefMozafari/Nasib/releases/latest):
+  - Ubuntu, Debian, Mint: `Nasib-<version>-linux-x64.deb`, then
+    `sudo apt install ./Nasib-<version>-linux-x64.deb`;
+  - Fedora: `Nasib-<version>-linux-x64.rpm`, then `sudo dnf install ./Nasib-<version>-linux-x64.rpm`;
+  - anything else: `Nasib-<version>-linux-x64.tar.gz`, then unpack it and run `./nasib/install.sh`,
+    which installs into `~/.local` without root. `./nasib/install.sh uninstall` removes it.
+- **Tray icon:** KDE, Cinnamon, Xfce, MATE and Ubuntu's GNOME show it. Stock GNOME, as on Fedora and
+  Debian, needs the AppIndicator extension. Without a tray, the window stays open and closing it
+  quits Nasib.
+- **Launch at login:** adds `~/.config/autostart/nasib.desktop`, which starts Nasib in the tray.
+- **Dark mode** follows the desktop's light or dark setting.
+
 ### Set Windscribe's anti-censorship options yourself
 
 - Windscribe's Anti-Censorship preferences (Protocol Tweaks, the Amnezia config and Server Routing)
@@ -102,11 +124,11 @@ The output pane shows each stage of a search as it starts, and the port of every
 ## Using it
 
 **The icon**
-- The waves in the menu bar or notification area are solid when connected, dashed while searching,
-  and crossed out when down.
-- Clicking them opens a menu: the current server, Open Nasib, Find Now, About and Quit. On Windows,
-  the menu is on right-click, and a left click opens the window.
-- Closing the window doesn't quit the app.
+- The waves in the menu bar, notification area or tray are solid when connected, dashed while
+  searching, and crossed out when down.
+- Clicking them opens a menu: the current server, Open Nasib, Find Now, About and Quit. On Windows
+  and Linux, the menu is on right-click, and a left click opens the window.
+- Closing the window doesn't quit the app, except on a Linux desktop with no tray.
 
 **The controls** (hover over any of them for a one-line explanation)
 - **Find Now** runs one search and stops at the first pair that works. While it runs, it reads
@@ -117,7 +139,8 @@ The output pane shows each stage of a search as it starts, and the port of every
 - **Auto-reconnect** reads the tunnel status every 3 seconds and checks a blocked site once a minute,
   and searches when either fails.
 - **Settings** holds the locations to search and the protocols to try, each in your order.
-  - Your locations are a list you check and put in order: drag them on macOS, use the arrows on Windows.
+  - Your locations are a list you check and put in order: drag them on macOS and Linux, use the arrows
+    on Windows.
     Add more from every Windscribe datacenter, grouped by region. Both lists have a search field, and
     Select all and Deselect all act on what the search shows, or on one region. "Rank by recent success"
     reorders them by what worked lately; turn it off to follow your order exactly. Cities saved by an
@@ -130,23 +153,24 @@ The output pane shows each stage of a search as it starts, and the port of every
 - Notifications come when it connects, when the tunnel drops, and when nothing works.
 - **Updates:** Nasib asks GitHub for the latest release at launch and once a day. When there's a
   newer one, you get an **Update to** button next to the app name, the same item in the menu, and one
-  notification. Each opens the release page; download the new zip and replace the app. Nasib never
-  installs anything itself.
+  notification. Each opens the release page; download the new version and replace the app, or on
+  Linux install the new package over the old one. Nasib never installs anything itself.
 
-**Where it keeps things:** everything Nasib keeps is in `~/.ws-find` on macOS and `%LOCALAPPDATA%\Nasib` on Windows:
+**Where it keeps things:** everything Nasib keeps is in `~/.ws-find` on macOS, `%LOCALAPPDATA%\Nasib`
+on Windows and `~/.local/share/nasib` on Linux:
 
 | File | What's in it |
 |---|---|
 | `log.csv` | Every attempt: time, datacenter, protocol, `ok` or `fail`, and the port |
 | `last_good` | The last datacenter, protocol and port that worked |
 | `config.json` | What you saved in Settings. Older macOS versions kept it in `config`, which is converted once and removed. |
-| `preferences.json` (Windows) | Whether auto-reconnect is on, and the last update you were told about |
+| `preferences.json` (Windows, Linux) | Whether auto-reconnect is on, and the last update you were told about |
 
 ## Building from source
 
 ### Engine
 
-`Engine/` holds `nasib-engine`, the Rust program that does the searching. Both apps run it. You need
+`Engine/` holds `nasib-engine`, the Rust program that does the searching. Every app runs it. You need
 the Rust toolchain. From the repository root:
 
 ```bash
@@ -197,6 +221,23 @@ and Rust with the `x86_64-pc-windows-msvc` target, which is the default on Windo
 - The tray glyph and the app icon are drawn from the same path data as the SVGs in `Design/`; the
   build writes the `.exe` icon from it with `Windows/tools/Nasib.IconBuilder`.
 
+### Linux
+
+Everything for the Linux app is under `Linux/`: the GTK 4 app in Rust and its tests. You need Docker;
+everything builds in an Ubuntu 22.04 container, so the binaries run on every target distro. From the
+repository root:
+
+```bash
+./Linux/build.sh
+```
+
+- `./Linux/build.sh` runs the engine's and the app's tests for this machine's architecture. It needs
+  bash and Docker.
+- `./Linux/build.sh release` runs them for x64, then writes `Nasib-<version>-linux-x64.deb`, `.rpm`
+  and `.tar.gz` into `Linux/build/`.
+- The app icon is `Design/AppIcon.svg`; the tray glyphs are the `Design/` menu bar SVGs, recolored as
+  symbolic icons when packaging.
+
 ## Known limits
 
 - Another VPN running a system-wide tunnel, such as v2rayN in TUN mode, can fool the blocked-site
@@ -211,7 +252,9 @@ and Rust with the `x86_64-pc-windows-msvc` target, which is the default on Windo
   the first knock skips those ports, as the network is then likely down. A survey always covers them,
   so it takes several times longer than before.
 - macOS builds are signed ad hoc, not notarized. Windows builds aren't signed.
-- The Windows build is x64 only.
+- The Windows and Linux builds are x64 only.
+- The Linux app hasn't been tested on a real Windscribe connection yet, and the Windscribe paths it
+  uses on Linux are the expected ones, not yet confirmed.
 
 ## License
 
