@@ -15,6 +15,7 @@ final class Engine: ObservableObject {
 
     private nonisolated static let engineName = "nasib-engine"
     private nonisolated static let statusArgument = "--status"
+    private nonisolated static let catalogArgument = "--catalog"
     private static let processPath = "/usr/local/bin:/usr/bin:/bin"
     private static let watchInterval: TimeInterval = 60
     /// Reading the CLI status costs no traffic, so it runs far more often than the blocked-site check.
@@ -149,13 +150,13 @@ final class Engine: ObservableObject {
         }
     }
 
-    /// Runs `nasib-engine --status` off the main thread and returns the line it prints, empty when the
-    /// engine can't run.
-    private nonisolated static func readEngineStatus() -> String {
+    /// Runs a one-shot engine mode and returns what it prints, trimmed; empty when the engine can't run.
+    /// Call it off the main thread.
+    private nonisolated static func runEngineOnce(_ argument: String) -> String {
         guard let engineURL else { return "" }
         let process = Process()
         process.executableURL = engineURL
-        process.arguments = [statusArgument]
+        process.arguments = [argument]
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = FileHandle.nullDevice
@@ -163,6 +164,16 @@ final class Engine: ObservableObject {
         let output = String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
         process.waitUntilExit()
         return output.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// The line `nasib-engine --status` prints.
+    private nonisolated static func readEngineStatus() -> String {
+        runEngineOnce(statusArgument)
+    }
+
+    /// Every datacenter the engine knows, for Settings; nil when the engine can't be read.
+    nonisolated static func readCatalog() -> EngineCatalog? {
+        EngineCatalog.decode(runEngineOnce(catalogArgument))
     }
 
     /// True when a tunnel the app showed as connected has gone down. A stopped search or a tunnel that was

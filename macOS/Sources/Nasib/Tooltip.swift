@@ -2,12 +2,13 @@
 enum Tooltip {
     static let findNow = "Search for a working server and connect to the first one that loads a blocked site."
     static let stopFind = "Stop searching and disconnect."
-    static let startSurvey = "Try every server on every protocol and record the results, without stopping at the first success."
+    static let startSurvey = "Try every server on every protocol and port and record the results, without stopping at the first success."
     static let stopSurvey = "Stop the survey and reconnect to the last server that worked."
     static let showLog = "Open the list of every connection attempt."
     static let autoReconnect = "Check the tunnel every 3 seconds and a blocked site every minute, and search for a new server when either fails."
     static let launchAtLogin = "Start Nasib in the background when you sign in."
-    static let save = "Use these cities and protocols from the next search on."
+    static let save = "Use these locations and protocols from the next search on."
     static let update = "Open the release page to download the new version."
-    static let resetToDefaults = "Restore the default cities and protocol order. Nothing changes until you save."
+    static let resetToDefaults = "Restore the default locations, ranking and protocol order. Nothing changes until you save."
+    static let rankBySuccess = "Try the checked locations in the order that worked best lately, instead of exactly your order."
 }
