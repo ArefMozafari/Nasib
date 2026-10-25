@@ -15,10 +15,20 @@
     <GeneratedApplicationIcon>$(MSBuildProjectDirectory)\obj\Generated\Nasib.ico</GeneratedApplicationIcon>
     <ApplicationIcon>$(GeneratedApplicationIcon)</ApplicationIcon>
     <IconBuilderProject>$(MSBuildProjectDirectory)\..\..\tools\Nasib.IconBuilder\Nasib.IconBuilder.csproj</IconBuilderProject>
+    <!-- The shared Rust engine, where a release cargo build for x86_64-pc-windows-msvc leaves it; build.ps1 builds it. -->
+    <EngineExecutable>$(MSBuildProjectDirectory)\..\..\..\Engine\target\x86_64-pc-windows-msvc\release\nasib-engine.exe</EngineExecutable>
   </PropertyGroup>
 
+  <!-- The app runs nasib-engine.exe from its own folder, so it travels next to Nasib.exe, outside the single-file bundle. -->
+  <ItemGroup Condition="Exists('$(EngineExecutable)')">
+    <None Include="$(EngineExecutable)"
+          Link="nasib-engine.exe"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest"
+          ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
   <ItemGroup>
-    <ProjectReference Include="..\Nasib.Engine\Nasib.Engine.csproj" />
     <!-- Built first so its output can draw the .exe icon; nothing from it ships. -->
     <ProjectReference Include="$(IconBuilderProject)"
                       ReferenceOutputAssembly="false"

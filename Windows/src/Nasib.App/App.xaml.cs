@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Windows;
-using Nasib.Engine;
 
 namespace Nasib.App;
 
@@ -34,24 +33,10 @@ public partial class App : Application
         }
 
         var paths = StatePaths.ForCurrentUser();
-        var timings = EngineTimings.Default;
-        var cli = new WindscribeCli(WindscribeCli.DefaultExecutablePath());
-        var tunnel = new TunnelController(
-            cli,
-            new HttpBlockedSiteProbe(HttpBlockedSiteProbe.DefaultAddress, timings.ProbeTimeout),
-            new TaskWaiter(),
-            timings);
-        var finder = new ServerFinder(
-            paths,
-            new DatacenterCatalog(SeedDatacenters.Load(), ClientLogParser.DefaultLogDirectory()),
-            tunnel,
-            new ReachabilityFilter(new TcpReachabilityProbe(), timings),
-            new AttemptLog(paths, TimeProvider.System));
-
         var preferences = Preferences.Load(paths);
-        controller = new EngineController(finder, tunnel, preferences, paths, cli.ExecutablePath, cli.IsInstalled);
+        controller = new EngineController(EngineProcess.DefaultExecutablePath, preferences, paths);
         updateChecker = new UpdateChecker(preferences);
-        mainWindow = new MainWindow(controller, updateChecker, new SettingsViewModel(paths));
+        mainWindow = new MainWindow(controller, updateChecker, new SettingsViewModel(paths, controller.ReadCatalogAsync));
         trayIcon = new TrayIcon(controller, updateChecker, mainWindow, ShowMainWindow, ShowAbout, Quit);
         controller.NotificationRequested += trayIcon.ShowNotification;
         updateChecker.NotificationRequested += trayIcon.ShowNotification;

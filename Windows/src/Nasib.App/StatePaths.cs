@@ -1,13 +1,16 @@
-namespace Nasib.Engine;
+using System;
+using System.IO;
+
+namespace Nasib.App;
 
 /// <summary>
-/// Where Nasib keeps its attempt log, the last pair that worked, and the saved settings.
+/// Where Nasib keeps its attempt log, the last pair that worked, and the saved settings. The engine reads
+/// and writes the same folder; Engine/README.md lists what it keeps there.
 /// </summary>
 public sealed class StatePaths
 {
     private const string ApplicationFolderName = "Nasib";
     private const string LogFileName = "log.csv";
-    private const string LastGoodFileName = "last_good";
     private const string ConfigurationFileName = "config.json";
 
     public StatePaths(string rootDirectory)
@@ -18,8 +21,6 @@ public sealed class StatePaths
     public string RootDirectory { get; }
 
     public string LogFile => Path.Combine(RootDirectory, LogFileName);
-
-    public string LastGoodFile => Path.Combine(RootDirectory, LastGoodFileName);
 
     public string ConfigurationFile => Path.Combine(RootDirectory, ConfigurationFileName);
 

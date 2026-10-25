@@ -6,6 +6,58 @@
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
         <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
+        <app:VisibleWhenEmptyConverter x:Key="VisibleWhenEmpty" />
+        <app:VisibleWhenPresentConverter x:Key="VisibleWhenPresent" />
+
+        <!-- A Settings section set apart on a card, like the group boxes on macOS. -->
+        <Style x:Key="SettingsGroup" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="{x:Static app:DesignTokens.HairlineThickness}" />
+            <Setter Property="CornerRadius" Value="{x:Static app:DesignTokens.GroupCornerRadius}" />
+            <Setter Property="Padding" Value="{x:Static app:DesignTokens.GroupPadding}" />
+        </Style>
+
+        <!-- The frame around a scrolling list inside a Settings section. -->
+        <Style x:Key="ListFrame" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="{x:Static app:DesignTokens.HairlineThickness}" />
+            <Setter Property="CornerRadius" Value="{x:Static app:DesignTokens.ControlCornerRadius}" />
+            <Setter Property="Padding" Value="{x:Static app:DesignTokens.CompactRowPadding}" />
+        </Style>
+
+        <Style x:Key="ColumnHeadingText" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- The small Select all and Deselect all links next to a list's heading. -->
+        <Style x:Key="LinkText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{x:Static app:DesignTokens.CaptionFontSize}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="{x:Static app:DesignTokens.InlineGap}" />
+        </Style>
+
+        <!-- The hint inside an empty search box, which lets clicks through to the box. -->
+        <Style x:Key="SearchHint" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Setter Property="Margin" Value="{x:Static app:DesignTokens.SearchHintMargin}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+        </Style>
+
+        <!-- The small up and down arrows on a location row. -->
+        <Style x:Key="SmallArrowButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="{x:Static app:DesignTokens.SmallArrowFontSize}" />
+            <Setter Property="Width" Value="{x:Static app:DesignTokens.SmallArrowButtonSize}" />
+            <Setter Property="Height" Value="{x:Static app:DesignTokens.SmallArrowButtonSize}" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="{x:Static app:DesignTokens.NoPadding}" />
+            <Setter Property="Margin" Value="{x:Static app:DesignTokens.ArrowGap}" />
+        </Style>
 
         <Style x:Key="TitleText" TargetType="TextBlock">
             <Setter Property="FontSize" Value="{x:Static app:DesignTokens.TitleFontSize}" />
