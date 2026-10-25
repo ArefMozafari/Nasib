@@ -1,6 +1,6 @@
 import Foundation
 
-/// Drives the bundled ws-find.sh script and mirrors its progress for the UI.
+/// Drives the bundled nasib-engine and mirrors its progress for the UI.
 @MainActor
 final class Engine: ObservableObject {
     enum State: Equatable {
@@ -13,10 +13,8 @@ final class Engine: ObservableObject {
     nonisolated static let stateDirectory = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ws-find")
     nonisolated static let logFile = stateDirectory.appendingPathComponent("log.csv")
 
-    private static let scriptName = "ws-find"
-    private static let scriptExtension = "sh"
-    private static let shellPath = "/bin/zsh"
-    private nonisolated static let windscribeCliPath = "/usr/local/bin/windscribe-cli"
+    private nonisolated static let engineName = "nasib-engine"
+    private nonisolated static let statusArgument = "--status"
     private static let processPath = "/usr/local/bin:/usr/bin:/bin"
     private static let watchInterval: TimeInterval = 60
     /// Reading the CLI status costs no traffic, so it runs far more often than the blocked-site check.
@@ -25,9 +23,6 @@ final class Engine: ObservableObject {
     private static let autoReconnectKey = "autoReconnect"
     private static let surveyArgument = "--survey"
     private static let watchArgument = "--watch"
-    // Tells the script to skip its own osascript notifications; the app posts them from the parsed lines.
-    private static let scriptNotifyVariable = "NASIB_NOTIFY"
-    private static let scriptNotifyDisabled = "0"
     private static let connectedNotificationTitle = "Connected"
     private static let nothingWorkedNotificationTitle = "No working server"
     private static let nothingWorkedNotificationBody = "Every datacenter and protocol failed."
@@ -47,20 +42,23 @@ final class Engine: ObservableObject {
     }
 
     private var process: Process?
+    /// Held open for the whole run: the engine treats its standard input closing as a stop.
+    private var processInput: Pipe?
     private var watchTimer: Timer?
     private var statusTimer: Timer?
     private var isRefreshing = false
 
     init() {
         autoReconnect = UserDefaults.standard.object(forKey: Self.autoReconnectKey) as? Bool ?? true
-        engineMissing = Self.scriptURL == nil
+        engineMissing = Self.engineURL == nil
         Notifier.requestPermission()
         startTimers()
         refreshStatus()
     }
 
-    private static var scriptURL: URL? {
-        Bundle.main.url(forResource: scriptName, withExtension: scriptExtension)
+    /// The engine binary, next to the app's own executable in Contents/MacOS.
+    private nonisolated static var engineURL: URL? {
+        Bundle.main.url(forAuxiliaryExecutable: engineName)
     }
 
     private func append(line: String) {
@@ -85,6 +83,8 @@ final class Engine: ObservableObject {
             state = .down
             isSearching = true
             Notifier.post(title: Self.tunnelDownNotificationTitle, body: Self.tunnelDownNotificationBody)
+        case .cliMissing:
+            state = .down
         case .failed, .searchStopped, .surveyStopped, .surveyFinished, .other:
             break
         }
@@ -92,23 +92,25 @@ final class Engine: ObservableObject {
 
     private func processDidExit() {
         process = nil
+        processInput = nil
         isBusy = false
         isSurveying = false
         isSearching = false
         refreshStatus()
     }
 
-    /// Runs the script with the given arguments; refuses while another run is in progress.
+    /// Runs the engine with the given arguments; refuses while another run is in progress.
     private func run(arguments: [String]) {
-        guard process == nil, let scriptURL = Self.scriptURL else { return }
+        guard process == nil, let engineURL = Self.engineURL else { return }
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: Self.shellPath)
-        process.arguments = [scriptURL.path] + arguments
+        process.executableURL = engineURL
+        process.arguments = arguments
         process.environment = [
             "PATH": Self.processPath,
             "HOME": FileManager.default.homeDirectoryForCurrentUser.path,
-            Self.scriptNotifyVariable: Self.scriptNotifyDisabled,
         ]
+        let input = Pipe()
+        process.standardInput = input
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = pipe
@@ -124,6 +126,7 @@ final class Engine: ObservableObject {
         do {
             try process.run()
             self.process = process
+            processInput = input
             isBusy = true
         } catch {
             append(line: "could not start engine: \(error.localizedDescription)")
@@ -145,18 +148,20 @@ final class Engine: ObservableObject {
         }
     }
 
-    /// Runs `windscribe-cli status` off the main thread and returns its output, empty when the CLI is missing.
-    private nonisolated static func readCliStatus() -> String {
+    /// Runs `nasib-engine --status` off the main thread and returns the line it prints, empty when the
+    /// engine can't run.
+    private nonisolated static func readEngineStatus() -> String {
+        guard let engineURL else { return "" }
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: windscribeCliPath)
-        process.arguments = ["status"]
+        process.executableURL = engineURL
+        process.arguments = [statusArgument]
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = FileHandle.nullDevice
         guard (try? process.run()) != nil else { return "" }
         let output = String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
         process.waitUntilExit()
-        return output
+        return output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// True when a tunnel the app showed as connected has gone down. A stopped search or a tunnel that was
@@ -172,11 +177,11 @@ final class Engine: ObservableObject {
         guard !isRefreshing, process == nil else { return }
         isRefreshing = true
         Task {
-            let output = await Task.detached { Self.readCliStatus() }.value
+            let line = await Task.detached { Self.readEngineStatus() }.value
             isRefreshing = false
             guard !isBusy else { return }
             let previous = state
-            if let status = EngineOutputParser.parseStatus(output: output) {
+            if let status = EngineOutputParser.parseStatus(line: line) {
                 state = .connected(location: status.location, protocolName: status.protocolName)
             } else {
                 state = .down

@@ -187,7 +187,7 @@ struct StatusTab: View {
             AppHeader()
             StatusHeader()
             if engine.engineMissing {
-                Text("Engine script missing from the app bundle.").foregroundStyle(.red)
+                Text("Engine missing from the app bundle.").foregroundStyle(.red)
             }
             ActionRow()
             Divider()

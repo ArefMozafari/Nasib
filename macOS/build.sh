@@ -10,6 +10,11 @@ APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 INSTALL_DIR="$HOME/Applications"
 RELEASE_PLATFORM_SUFFIX="macos"
 
+# The engine is shared with the other apps, so it lives at the repository root.
+ENGINE_DIR="../Engine"
+ENGINE_NAME="nasib-engine"
+ENGINE_TARGET="aarch64-apple-darwin"
+
 ICON_WORK_DIR="$BUILD_DIR/icons"
 # Icon sources are shared with the Windows app, so they live at the repository root.
 DESIGN_DIR="../Design"
@@ -44,17 +49,20 @@ render_icons() {
 
 if [[ "${1:-}" == "release" ]]; then
   swift test
-  zsh Tests/Engine/ws-find.test.zsh
+  cargo test --manifest-path "$ENGINE_DIR/Cargo.toml"
 fi
 
 swift build -c release
+cargo build --release --manifest-path "$ENGINE_DIR/Cargo.toml" --target "$ENGINE_TARGET"
 
 rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"
 cp ".build/release/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/"
+cp "$ENGINE_DIR/target/$ENGINE_TARGET/release/$ENGINE_NAME" "$APP_BUNDLE/Contents/MacOS/"
 cp Packaging/Info.plist "$APP_BUNDLE/Contents/"
-cp Engine/ws-find.sh "$APP_BUNDLE/Contents/Resources/"
 render_icons
+# The engine is signed on its own first, so the app's signature seals a signed helper.
+codesign --force --sign - "$APP_BUNDLE/Contents/MacOS/$ENGINE_NAME"
 codesign --force --sign - "$APP_BUNDLE"
 echo "built $APP_BUNDLE"
 

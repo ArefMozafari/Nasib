@@ -62,29 +62,37 @@ final class EngineOutputParserTests: XCTestCase {
         )
     }
 
-    func testShouldParseConnectedStatusWithProtocolPortStripped() {
-        let output = """
-        Internet connectivity: available
-        Login state: Logged in
-        Connect state: Connected: Atlanta - Magic City
-        Protocol: IKEv2:500
-        VPN IP: 198.51.100.20
-        """
+    func testShouldSplitPairOnLastSeparator() {
         XCTAssertEqual(
-            EngineOutputParser.parseStatus(output: output),
+            EngineOutputParser.parse(line: "trying: Inside / Job / ikev2"),
+            .trying(location: "Inside / Job", protocolName: "ikev2")
+        )
+    }
+
+    func testShouldParseCliMissing() {
+        XCTAssertEqual(
+            EngineOutputParser.parse(line: "windscribe-cli missing: /usr/local/bin/windscribe-cli"),
+            .cliMissing(path: "/usr/local/bin/windscribe-cli")
+        )
+        XCTAssertEqual(EngineEvent.cliMissing(path: "/usr/local/bin/windscribe-cli").tone, .error)
+    }
+
+    func testShouldParseConnectedStatusLine() {
+        XCTAssertEqual(
+            EngineOutputParser.parseStatus(line: "connected: Atlanta - Magic City / IKEv2"),
             TunnelStatus(location: "Atlanta - Magic City", protocolName: "IKEv2")
         )
     }
 
-    func testShouldReturnNilStatusWhenDisconnected() {
-        let output = """
-        Connect state: Disconnected
-        Public IP: 203.0.113.10
-        """
-        XCTAssertNil(EngineOutputParser.parseStatus(output: output))
+    func testShouldReturnNilForDown() {
+        XCTAssertNil(EngineOutputParser.parseStatus(line: "down"))
     }
 
-    func testShouldReturnNilStatusWhileConnecting() {
-        XCTAssertNil(EngineOutputParser.parseStatus(output: "Connect state: Connecting\nProtocol: IKEv2:500"))
+    func testShouldReturnNilStatusWhenTheCliIsMissing() {
+        XCTAssertNil(EngineOutputParser.parseStatus(line: "windscribe-cli missing: /usr/local/bin/windscribe-cli"))
+    }
+
+    func testShouldReturnNilStatusForEmptyOutput() {
+        XCTAssertNil(EngineOutputParser.parseStatus(line: ""))
     }
 }
