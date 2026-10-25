@@ -31,8 +31,8 @@ one by one in the Windscribe app takes longer than the connection lasts.
 ## How it decides
 
 1. **Reads the datacenters from Windscribe's own log**, so new, moved or retired servers show up
-   without an update. Only the cities you list are used. On Windows, Windscribe logs a datacenter
-   only when it connects to it, so Nasib starts from a bundled list and the log adds to it.
+   without an update. Only the cities you list are used. Nasib starts from a bundled list and the log
+   adds to it, since Windscribe on Windows logs a datacenter only once it connects to it.
 2. **Knocks on every address at once** and drops the ones that don't answer at all. That takes about
    two seconds and usually rules out half the list.
 3. **Ranks the datacenters by recent success** over the last 300 attempts, and tries protocols
@@ -127,39 +127,41 @@ one by one in the Windscribe app takes longer than the connection lasts.
 |---|---|
 | `log.csv` | Every attempt: time, datacenter, protocol, `ok` or `fail` |
 | `last_good` | The last datacenter and protocol that worked |
-| `config` (macOS), `config.json` (Windows) | What you saved in Settings |
+| `config.json` | What you saved in Settings. Older macOS versions kept it in `config`, which is converted once and removed. |
 | `preferences.json` (Windows) | Whether auto-reconnect is on, and the last update you were told about |
 
 ## Building from source
 
+### Engine
+
+`Engine/` holds `nasib-engine`, the Rust program that does the searching. The macOS app runs it, and
+the Windows app will too. You need the Rust toolchain. From the repository root:
+
+```bash
+cd Engine
+cargo test
+```
+
+- The tests run against a fake `windscribe-cli` and fake probes, so they never touch the real VPN.
+- The engine also works without an app: `nasib-engine` with no arguments searches once, and it takes
+  `--watch`, `--survey`, `--reach`, `--rank`, `--locations` and `--status`.
+- [`Engine/README.md`](Engine/README.md) describes each mode, the lines the apps read, and the exit codes.
+
 ### macOS
 
-Everything for macOS is under `macOS/`: the Swift app, the engine script, and their tests. You need
-Xcode. From the repository root:
+Everything for the macOS app is under `macOS/`. You need Xcode and the Rust toolchain. From the
+repository root:
 
 ```bash
 ./macOS/build.sh install
 ```
 
-- `./macOS/build.sh install` builds `macOS/build/Nasib.app`, copies it to `~/Applications` and
-  launches it.
+- `./macOS/build.sh install` builds `macOS/build/Nasib.app` with the engine inside, copies it to
+  `~/Applications` and launches it.
 - `./macOS/build.sh` builds without installing.
-- `./macOS/build.sh release` runs both test suites, then writes `macOS/build/Nasib-<version>-macos.zip`.
-
-To run the tests alone:
-
-```bash
-cd macOS
-swift test
-zsh Tests/Engine/ws-find.test.zsh
-```
-
-- `swift test` runs the app's unit tests.
-- `ws-find.test.zsh` runs the engine against stub `windscribe-cli`, `curl` and `nc` in a throwaway
-  home folder, so it never touches the real VPN.
-- The engine also works without the app: `macOS/Engine/ws-find.sh` with no arguments searches once,
-  and it takes `--watch`, `--survey`, `--reach`, `--rank` and `--locations`, each described at the
-  top of the file.
+- `./macOS/build.sh release` runs the app's and the engine's tests, then writes
+  `macOS/build/Nasib-<version>-macos.zip`.
+- `swift test`, run in `macOS/`, runs the app's tests alone.
 
 ### Icons
 
@@ -179,8 +181,8 @@ need the .NET 9 SDK. From PowerShell:
 - `build.ps1` runs the tests, then writes `Windows/build/Nasib-<version>-win-x64.zip` with a single
   self-contained `Nasib.exe`.
 - `dotnet test Windows/Nasib.sln` runs the tests alone.
-- The engine is a port of `macOS/Engine/ws-find.sh` with the same modes, timings and files. Its tests
-  run it against a fake `windscribe-cli` and fake probes, so they never touch the real VPN.
+- The Windows app still has its own C# engine, with the same modes, timings and files as `Engine/`.
+  Its tests run it against a fake `windscribe-cli` and fake probes, so they never touch the real VPN.
 - The tray glyph and the app icon are drawn from the same path data as the SVGs in `Design/`; the
   build writes the `.exe` icon from it with `Windows/tools/Nasib.IconBuilder`.
 

@@ -2,7 +2,7 @@ namespace Nasib.Engine;
 
 /// <summary>
 /// Finds a Windscribe datacenter and protocol that carries traffic right now, connects to it, and keeps it
-/// connected. The Windows counterpart of macOS/Engine/ws-find.sh, with the same three modes:
+/// connected. The Windows counterpart of the shared engine in Engine/, with the same three modes:
 /// Find searches once, Watch searches only when the tunnel stopped working, and Survey tries every pair.
 /// </summary>
 public sealed class ServerFinder

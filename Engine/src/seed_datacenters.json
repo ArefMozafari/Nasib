@@ -1,0 +1,22 @@
+[
+  { "city": "Istanbul", "nickname": "Lygos", "addresses": ["149.50.208.46", "149.50.208.33", "150.241.139.190", "150.241.139.188"] },
+  { "city": "Dubai", "nickname": "Khalifa", "addresses": ["135.136.7.178", "135.136.7.194"] },
+  { "city": "Sofia", "nickname": "Vitoshka", "addresses": ["150.241.139.14", "109.204.88.17", "169.150.237.1"] },
+  { "city": "Sofia", "nickname": "Nevski", "addresses": ["185.94.192.210", "150.241.139.208", "185.216.32.226"] },
+  { "city": "Stockholm", "nickname": "Fika", "addresses": ["68.67.118.162"] },
+  { "city": "Stockholm", "nickname": "Djurgarden", "addresses": ["166.0.9.194", "79.142.77.63"] },
+  { "city": "Amsterdam", "nickname": "Stolen Cheese", "addresses": ["161.129.60.66", "161.129.60.34"] },
+  { "city": "Frankfurt", "nickname": "Wurstchen", "addresses": ["149.36.50.157", "149.36.50.1", "149.36.50.129", "87.249.132.97", "166.0.9.44", "166.0.9.46", "166.0.9.48", "166.0.9.54"] },
+  { "city": "Frankfurt", "nickname": "Sausage Party", "addresses": ["135.136.0.2", "135.136.0.66", "135.136.0.98", "37.120.146.66", "37.120.146.98", "166.0.9.38", "166.0.9.40", "166.0.9.42"] },
+  { "city": "Zurich", "nickname": "Altstadt", "addresses": ["141.255.162.194", "141.255.162.210", "31.7.62.50", "166.0.9.216", "166.0.9.14", "166.0.9.16"] },
+  { "city": "Toronto", "nickname": "The 6", "addresses": ["198.44.157.27", "198.44.157.19"] },
+  { "city": "Montreal", "nickname": "Bagel Poutine", "addresses": ["147.90.45.8", "147.90.45.247", "84.20.16.97", "84.20.16.110"] },
+  { "city": "Winnipeg", "nickname": "The Forks", "addresses": ["23.154.80.66", "23.154.80.34"] },
+  { "city": "New York", "nickname": "Inside Job", "addresses": ["147.90.45.182", "147.90.45.184", "149.88.21.129", "149.88.21.140"] },
+  { "city": "Chicago", "nickname": "Green Mill", "addresses": ["121.127.34.82"] },
+  { "city": "Atlanta", "nickname": "Magic City", "addresses": ["147.90.45.40", "147.90.45.42", "147.90.45.44", "147.90.45.46", "198.44.138.19", "198.44.138.27", "198.44.138.35", "198.44.138.43"] },
+  { "city": "Bratislava", "nickname": "Devin Castle", "addresses": ["149.102.232.225", "149.102.232.238", "150.241.139.234"] },
+  { "city": "Helsinki", "nickname": "Sauna", "addresses": ["109.204.49.142", "109.204.49.129", "166.0.9.158"] },
+  { "city": "Helsinki", "nickname": "Tram", "addresses": ["83.143.242.2"] },
+  { "city": "Brussels", "nickname": "Guildhouse", "addresses": ["146.70.176.242", "146.70.123.98", "166.0.9.8"] }
+]
