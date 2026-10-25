@@ -1,0 +1,35 @@
+/* Colors for the Status tab, from the theme's own names where GTK has them, so light and dark both fit. */
+@define-color nasib_phase_color #1c9c9c;
+
+.status-dot {
+  border-radius: 50%;
+  background-color: alpha(currentColor, 0.4);
+}
+.status-dot.down { background-color: @error_color; }
+.status-dot.searching { background-color: @warning_color; }
+.status-dot.connected { background-color: @success_color; }
+
+.engine-missing,
+.settings-error { color: @error_color; }
+
+.log-line {
+  font-family: monospace;
+  font-size: smaller;
+  padding: 2px 4px;
+}
+.log-line.striped { background-color: alpha(currentColor, 0.06); }
+.tone-success { color: @success_color; }
+.tone-muted { color: alpha(currentColor, 0.6); }
+.tone-warning { color: @warning_color; }
+.tone-error { color: @error_color; }
+.tone-accent { color: @theme_selected_bg_color; }
+.tone-detail { color: alpha(currentColor, 0.45); }
+.tone-phase { color: @nasib_phase_color; }
+
+.app-name {
+  font-weight: bold;
+  font-size: larger;
+}
+.server-line { font-weight: bold; }
+.caption { font-size: smaller; }
+.dim-label { opacity: 0.6; }

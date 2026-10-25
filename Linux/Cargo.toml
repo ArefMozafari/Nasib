@@ -1,0 +1,31 @@
+[package]
+name = "nasib-linux"
+version = "0.3.0"
+edition = "2024"
+description = "Keeps Windscribe connected from networks that block most of it."
+license = "MIT"
+publish = false
+
+[lib]
+name = "nasib_linux"
+path = "src/lib.rs"
+
+[[bin]]
+name = "nasib"
+path = "src/main.rs"
+
+[dependencies]
+async-channel = "2"
+gtk = { package = "gtk4", version = "0.11", features = ["v4_6"] }
+# async-io instead of the default tokio, which nothing else here needs.
+ksni = { version = "0.3", default-features = false, features = ["async-io", "blocking"] }
+nasib-engine = { path = "../Engine" }
+notify-rust = "4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ureq = { version = "3.5.0", default-features = false, features = ["rustls", "json"] }
+zbus = "5"
+
+[profile.release]
+strip = true
+lto = true

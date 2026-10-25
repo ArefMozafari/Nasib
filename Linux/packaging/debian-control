@@ -1,0 +1,11 @@
+Package: nasib
+Version: @VERSION@
+Architecture: amd64
+Maintainer: Aref Mozafari <https://github.com/ArefMozafari/Nasib>
+Depends: libgtk-4-1 (>= 4.6), libc6 (>= 2.35)
+Section: net
+Priority: optional
+Homepage: https://github.com/ArefMozafari/Nasib
+Description: Keeps Windscribe connected from networks that block most of it
+ Nasib finds a Windscribe server and protocol that still work, reconnects when the tunnel drops, and
+ records every attempt. It needs the Windscribe app for Linux.
