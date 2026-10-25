@@ -4,26 +4,29 @@ use std::collections::HashSet;
 use std::fs;
 
 use nasib_engine::catalog;
-use nasib_engine::configuration::{Configuration, DEFAULT_CITIES};
+use nasib_engine::configuration::DEFAULT_LOCATIONS;
 use nasib_engine::datacenter::Datacenter;
 use support::TemporaryDirectory;
+
+const BUNDLED_MINIMUM: usize = 200;
 
 fn datacenter(location_name: &str, address: &str) -> Datacenter {
     Datacenter::from_location_name(location_name, vec![address.to_string()]).unwrap()
 }
 
-fn seed() -> Vec<Datacenter> {
+fn bundled_pair() -> Vec<Datacenter> {
     vec![
-        datacenter("Istanbul - Lygos", "203.0.113.1"),
-        datacenter("Amsterdam - Stolen Cheese", "203.0.113.2"),
+        Datacenter {
+            region: Some("Turkey".to_string()),
+            country_code: Some("TR".to_string()),
+            ..datacenter("Istanbul - Lygos", "203.0.113.1")
+        },
+        Datacenter {
+            region: Some("Netherlands".to_string()),
+            country_code: Some("NL".to_string()),
+            ..datacenter("Amsterdam - Stolen Cheese", "203.0.113.2")
+        },
     ]
-}
-
-fn every_city() -> Configuration {
-    Configuration {
-        cities: vec![],
-        protocol_order: vec![],
-    }
 }
 
 fn nicknames(datacenters: &[Datacenter]) -> Vec<&str> {
@@ -37,73 +40,74 @@ mod merge {
     use super::*;
 
     #[test]
-    fn should_add_logged_addresses_to_a_known_nickname() {
+    fn should_keep_the_region_when_the_log_adds_addresses() {
         let logged = vec![datacenter("Amsterdam - Stolen Cheese", "203.0.113.9")];
 
-        let merged = catalog::merge(seed(), logged, &every_city());
+        let merged = catalog::merge(bundled_pair(), logged);
 
         assert_eq!(nicknames(&merged), ["Lygos", "Stolen Cheese"]);
         assert_eq!(merged[1].addresses, vec!["203.0.113.2", "203.0.113.9"]);
+        assert_eq!(merged[1].region.as_deref(), Some("Netherlands"));
     }
 
     #[test]
-    fn should_append_nicknames_only_the_log_knows() {
+    fn should_add_log_only_datacenters_without_a_region() {
         let logged = vec![datacenter("Oslo - Fjord", "203.0.113.7")];
 
-        let merged = catalog::merge(seed(), logged, &every_city());
+        let merged = catalog::merge(bundled_pair(), logged);
 
         assert_eq!(nicknames(&merged), ["Lygos", "Stolen Cheese", "Fjord"]);
-    }
-
-    #[test]
-    fn should_keep_only_the_chosen_cities() {
-        let configuration = Configuration {
-            cities: vec!["amsterdam".to_string()],
-            protocol_order: vec![],
-        };
-
-        let merged = catalog::merge(seed(), vec![], &configuration);
-
-        assert_eq!(nicknames(&merged), ["Stolen Cheese"]);
+        assert_eq!(merged[2].region, None);
     }
 }
 
-mod seed_datacenters {
+mod bundled {
     use super::*;
 
     #[test]
-    fn should_load_every_bundled_datacenter_with_its_addresses() {
-        let datacenters = catalog::seed();
+    fn should_load_every_bundled_datacenter_with_a_region() {
+        let datacenters = catalog::bundled();
 
-        assert_eq!(datacenters.len(), 20);
+        assert!(
+            datacenters.len() >= BUNDLED_MINIMUM,
+            "{}",
+            datacenters.len()
+        );
+        // A datacenter may have no servers in the list for a while; it stays listed, and the log can add them.
         assert!(datacenters
             .iter()
-            .all(|datacenter| !datacenter.addresses.is_empty()));
+            .all(|datacenter| datacenter.region.is_some() && datacenter.country_code.is_some()));
+        let with_addresses = datacenters
+            .iter()
+            .filter(|datacenter| !datacenter.addresses.is_empty())
+            .count();
+        assert!(
+            with_addresses * 10 >= datacenters.len() * 9,
+            "{with_addresses}"
+        );
         let unique: HashSet<&str> = nicknames(&datacenters).into_iter().collect();
         assert_eq!(unique.len(), datacenters.len());
     }
 
     #[test]
-    fn should_cover_every_default_city() {
-        let cities: HashSet<String> = catalog::seed()
-            .into_iter()
-            .map(|datacenter| datacenter.city)
-            .collect();
+    fn should_include_every_default_location() {
+        let datacenters = catalog::bundled();
+        let bundled: HashSet<&str> = nicknames(&datacenters).into_iter().collect();
 
-        for city in DEFAULT_CITIES {
-            assert!(cities.contains(city), "{city}");
+        for nickname in DEFAULT_LOCATIONS {
+            assert!(bundled.contains(nickname), "{nickname}");
         }
     }
 
     #[test]
     fn should_split_nicknames_that_contain_spaces_correctly() {
-        let datacenter = catalog::seed()
+        let datacenter = catalog::bundled()
             .into_iter()
             .find(|datacenter| datacenter.nickname == "Stolen Cheese")
             .unwrap();
 
         assert_eq!(datacenter.city, "Amsterdam");
-        assert_eq!(datacenter.addresses, vec!["161.129.60.66", "161.129.60.34"]);
+        assert_eq!(datacenter.region.as_deref(), Some("Netherlands"));
     }
 }
 
@@ -111,7 +115,7 @@ mod load {
     use super::*;
 
     #[test]
-    fn should_merge_the_windscribe_log_over_the_seed() {
+    fn should_merge_the_windscribe_log_over_the_bundled_list() {
         let directory = TemporaryDirectory::new();
         fs::write(
             directory.path().join("client.log"),
@@ -119,15 +123,15 @@ mod load {
         )
         .unwrap();
 
-        let datacenters = catalog::load(&every_city(), directory.path());
+        let datacenters = catalog::load(directory.path());
 
         let amsterdam = datacenters
             .iter()
             .find(|datacenter| datacenter.nickname == "Stolen Cheese")
             .unwrap();
         assert_eq!(
-            amsterdam.addresses,
-            vec!["161.129.60.66", "161.129.60.34", "203.0.113.5"]
+            amsterdam.addresses.last().map(String::as_str),
+            Some("203.0.113.5")
         );
     }
 }

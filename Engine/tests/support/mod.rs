@@ -2,7 +2,7 @@
 //! uses only part of it.
 #![allow(dead_code)]
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -65,7 +65,9 @@ pub struct FakeCliState {
     pub stuck_connected: bool,
     /// Called before each connect, so a test can stop a search part way through.
     pub before_connect: Option<PairHook>,
-    /// Every call in order: "status", "connect <nickname> <protocol>", "disconnect".
+    /// What `ports <protocol>` prints; a protocol not listed prints nothing.
+    pub ports_by_protocol: HashMap<String, String>,
+    /// Every call in order: "status", "connect <nickname> <protocol>[:<port>]", "disconnect", "ports <protocol>".
     pub calls: Vec<String>,
 }
 
@@ -85,6 +87,7 @@ impl FakeCli {
                 error_is_sticky: false,
                 stuck_connected: false,
                 before_connect: None,
+                ports_by_protocol: HashMap::new(),
                 calls: Vec::new(),
             }),
         })
@@ -155,14 +158,18 @@ impl WindscribeCli for FakeCli {
         }
     }
 
-    fn connect(&self, nickname: &str, protocol: &str) {
+    fn connect(&self, nickname: &str, protocol: &str, port: Option<u16>) {
         let hook = self.inner.lock().unwrap().before_connect.take();
         if let Some(hook) = &hook {
             hook(nickname, protocol);
         }
         let mut inner = self.inner.lock().unwrap();
         inner.before_connect = hook;
-        inner.calls.push(format!("connect {nickname} {protocol}"));
+        let label = match port {
+            Some(port) => format!("{protocol}:{port}"),
+            None => protocol.to_string(),
+        };
+        inner.calls.push(format!("connect {nickname} {label}"));
         if inner.state == FakeTunnelState::Connected {
             inner.state = FakeTunnelState::Disconnected;
         } else if (inner.pair_connects)(nickname, protocol) {
@@ -183,6 +190,16 @@ impl WindscribeCli for FakeCli {
         if !(inner.state == FakeTunnelState::Error && inner.error_is_sticky) {
             inner.state = FakeTunnelState::Disconnected;
         }
+    }
+
+    fn ports(&self, protocol: &str) -> String {
+        let mut inner = self.inner.lock().unwrap();
+        inner.calls.push(format!("ports {protocol}"));
+        inner
+            .ports_by_protocol
+            .get(protocol)
+            .cloned()
+            .unwrap_or_default()
     }
 }
 

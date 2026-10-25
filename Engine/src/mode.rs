@@ -16,6 +16,8 @@ pub enum Mode {
     Locations,
     /// Print the tunnel the CLI reports, without touching it.
     Status,
+    /// Print every datacenter, grouped by region, as one JSON line for the apps' Settings.
+    Catalog,
 }
 
 impl Mode {
@@ -29,6 +31,7 @@ impl Mode {
                 "--rank" => Ok(Mode::Rank),
                 "--locations" => Ok(Mode::Locations),
                 "--status" => Ok(Mode::Status),
+                "--catalog" => Ok(Mode::Catalog),
                 other => Err(format!("unknown option: {other}")),
             },
             _ => Err("expected at most one option".to_string()),

@@ -2,7 +2,7 @@
 # Stands in for windscribe-cli in the end-to-end tests. It keeps the tunnel state in $FAKE_CLI_DIR/state
 # and logs every call to $FAKE_CLI_DIR/calls. Like the real app, a connect issued while a tunnel is up
 # tears the old tunnel down and drops the new request. A "never_connects" marker file keeps every connect
-# from coming up.
+# from coming up. "ports <protocol>" prints $FAKE_CLI_DIR/ports-<protocol> when that file exists.
 state_file="$FAKE_CLI_DIR/state"
 state=$(cat "$state_file" 2>/dev/null || echo disconnected)
 echo "$*" >>"$FAKE_CLI_DIR/calls"
@@ -22,4 +22,6 @@ case "$1" in
     fi ;;
   disconnect)
     echo disconnected >"$state_file" ;;
+  ports)
+    cat "$FAKE_CLI_DIR/ports-$2" 2>/dev/null ;;
 esac

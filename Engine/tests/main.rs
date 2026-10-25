@@ -116,6 +116,14 @@ impl Sandbox {
             .collect()
     }
 
+    fn list_ports(&self, protocol: &str, ports: &str) {
+        fs::write(
+            self.cli_directory().join(format!("ports-{protocol}")),
+            format!("{ports}\n"),
+        )
+        .unwrap();
+    }
+
     fn never_connect(&self) {
         fs::write(self.cli_directory().join("never_connects"), "").unwrap();
     }
@@ -269,6 +277,33 @@ mod cli_check {
             format!("windscribe-cli missing: {}\n", missing.display())
         );
     }
+
+    #[test]
+    fn should_print_the_catalog_without_the_cli() {
+        let sandbox = Sandbox::new(no_content_responder());
+        let missing = sandbox.directory.path().join("missing-cli");
+        let mut child = sandbox
+            .command(&["--catalog"], FAST_TIME_SCALE, &missing)
+            .spawn()
+            .unwrap();
+        let mut output = String::new();
+        child
+            .stdout
+            .take()
+            .unwrap()
+            .read_to_string(&mut output)
+            .unwrap();
+
+        assert_eq!(child.wait().unwrap().code(), Some(0));
+        let catalog: serde_json::Value = serde_json::from_str(output.trim()).unwrap();
+        let regions = catalog["regions"].as_array().unwrap();
+        assert!(regions.len() > 1);
+        assert_eq!(regions.last().unwrap()["name"], "Other");
+        assert_eq!(
+            regions.last().unwrap()["datacenters"][0]["nickname"],
+            "Fake"
+        );
+    }
 }
 
 mod status {
@@ -312,7 +347,7 @@ mod watch {
 
         assert_eq!(code, 0);
         assert!(output.starts_with("tunnel down\n"), "{output}");
-        assert!(output.contains("connected: Fake / ikev2\n"), "{output}");
+        assert!(output.contains("connected: Fake / ikev2:500\n"), "{output}");
     }
 }
 
@@ -326,11 +361,49 @@ mod find {
         let (code, output) = sandbox.run(&[]);
 
         assert_eq!(code, 0, "{output}");
-        assert!(sandbox.logged_attempts().ends_with(",Fake,ikev2,ok\n"));
+        // No ports are listed here, so the attempt logs the port the status reports.
+        assert!(
+            sandbox.logged_attempts().ends_with(",Fake,ikev2,ok,500\n"),
+            "{}",
+            sandbox.logged_attempts()
+        );
         assert_eq!(
             fs::read_to_string(sandbox.state_directory().join("last_good")).unwrap(),
-            "Fake|ikev2\n"
+            "Fake|ikev2:500\n"
         );
+    }
+
+    #[test]
+    fn should_print_the_port_and_phases() {
+        let sandbox = Sandbox::new(no_content_responder());
+        sandbox.list_ports("ikev2", "500");
+
+        let (code, output) = sandbox.run(&[]);
+
+        assert_eq!(code, 0, "{output}");
+        assert!(output.contains("phase: reachability\n"), "{output}");
+        assert!(output.contains("phase: ikev2 on port 500\n"), "{output}");
+        assert!(output.contains("trying: Fake / ikev2:500\n"), "{output}");
+        assert!(sandbox
+            .calls()
+            .contains(&"connect -n Fake ikev2:500".to_string()));
+    }
+
+    // The sandbox's datacenter doesn't answer knocks, which reads as offline, so a find skips the other
+    // ports; a survey still covers them. The second pass after a failed first pass is a finder unit test.
+    #[test]
+    fn should_survey_the_other_ports() {
+        let sandbox = Sandbox::new(no_content_responder());
+        sandbox.never_connect();
+        sandbox.list_ports("ikev2", "500, 4500");
+
+        let (code, output) = sandbox.run(&["--survey"]);
+
+        assert_eq!(code, 1, "{output}");
+        assert!(output.contains("phase: ikev2 on port 4500\n"), "{output}");
+        assert!(sandbox
+            .logged_attempts()
+            .contains(",Fake,ikev2,fail,4500\n"));
     }
 
     #[test]
@@ -444,6 +517,24 @@ mod app_goes_away {
         assert_eq!(code, STOPPED_EXIT_CODE);
         assert!(calls.contains(&"disconnect".to_string()), "{calls:?}");
         assert_eq!(sandbox.tunnel(), "disconnected");
+    }
+
+    #[test]
+    fn should_reconnect_last_good_with_its_port_when_the_app_quits_mid_survey() {
+        let sandbox = Sandbox::new(silent_listener());
+        fs::write(
+            sandbox.state_directory().join("last_good"),
+            "Fake|ikev2:4500\n",
+        )
+        .unwrap();
+
+        let (code, calls) = run_until_the_app_goes_away(&sandbox, &["--survey"]);
+
+        assert_eq!(code, STOPPED_EXIT_CODE);
+        assert!(
+            calls.contains(&"connect -n Fake ikev2:4500".to_string()),
+            "{calls:?}"
+        );
     }
 
     #[test]

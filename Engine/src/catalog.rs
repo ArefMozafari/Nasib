@@ -1,63 +1,71 @@
-//! The datacenters to search: the bundled list with whatever the Windscribe log has added, limited to
-//! the chosen cities. The bundled list matters on Windows, where Windscribe logs a datacenter only once
-//! it connects to it.
+//! Every datacenter the engine knows: the bundled list of all Windscribe datacenters, with whatever the
+//! Windscribe log has added. The bundled list comes from Windscribe's public server list through
+//! `Engine/tools/update-datacenters`; it matters most on Windows, where Windscribe logs a datacenter only
+//! once it connects to it.
 
 use std::path::Path;
 
 use serde::Deserialize;
 
 use crate::client_log;
-use crate::configuration::Configuration;
 use crate::datacenter::Datacenter;
 
-const SEED_DATACENTERS: &str = include_str!("seed_datacenters.json");
+const BUNDLED_DATACENTERS: &str = include_str!("datacenters.json");
 
 #[derive(Deserialize)]
-struct SeedDatacenter {
+struct BundledFile {
+    datacenters: Vec<BundledDatacenter>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BundledDatacenter {
+    region: String,
+    country_code: String,
     city: String,
     nickname: String,
     addresses: Vec<String>,
 }
 
-/// The bundled datacenters, in their file order.
-pub fn seed() -> Vec<Datacenter> {
-    let stored: Vec<SeedDatacenter> =
-        serde_json::from_str(SEED_DATACENTERS).expect("the bundled seed list is valid JSON");
-    stored
+/// The bundled datacenters, in the server list's order, which groups them by region.
+pub fn bundled() -> Vec<Datacenter> {
+    let file: BundledFile = serde_json::from_str(BUNDLED_DATACENTERS)
+        .expect("the bundled datacenter list is valid JSON");
+    file.datacenters
         .into_iter()
-        .map(|seed| Datacenter {
-            city: seed.city,
-            nickname: seed.nickname,
-            addresses: seed.addresses,
+        .map(|bundled| Datacenter {
+            region: Some(bundled.region),
+            country_code: Some(bundled.country_code),
+            logged: false,
+            city: bundled.city,
+            nickname: bundled.nickname,
+            addresses: bundled.addresses,
         })
         .collect()
 }
 
-/// Keeps the seed order, adds logged addresses to known nicknames, appends nicknames only the log
-/// knows, and keeps the chosen cities.
-pub fn merge(
-    seed: Vec<Datacenter>,
-    logged: Vec<Datacenter>,
-    configuration: &Configuration,
-) -> Vec<Datacenter> {
-    let mut merged = seed;
+/// Keeps the bundled order, adds logged addresses to known nicknames and marks them logged, and appends
+/// nicknames only the log knows, without a region.
+pub fn merge(bundled: Vec<Datacenter>, logged: Vec<Datacenter>) -> Vec<Datacenter> {
+    let mut merged = bundled;
     for datacenter in logged {
         match merged
             .iter_mut()
             .find(|existing| existing.nickname == datacenter.nickname)
         {
-            Some(existing) => *existing = existing.with_addresses(&datacenter.addresses),
+            Some(existing) => {
+                *existing = Datacenter {
+                    logged: true,
+                    ..existing.with_addresses(&datacenter.addresses)
+                }
+            }
             None => merged.push(datacenter),
         }
     }
-    merged.retain(|datacenter| configuration.includes_city(&datacenter.city));
     merged
 }
 
-pub fn load(configuration: &Configuration, log_directory: &Path) -> Vec<Datacenter> {
-    merge(
-        seed(),
-        client_log::read_directory(log_directory),
-        configuration,
-    )
+/// The bundled list merged with the Windscribe log in the given folder.
+pub fn load(log_directory: &Path) -> Vec<Datacenter> {
+    merge(bundled(), client_log::read_directory(log_directory))
 }
