@@ -3,59 +3,188 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:app="clr-namespace:Nasib.App">
     <StackPanel>
-        <TextBlock Text="Cities to search" Style="{StaticResource HeadingText}" />
-        <TextBlock Text="One per line, as Windscribe names them. Leave empty to search every city."
-                   Style="{StaticResource CaptionText}"
-                   Margin="{x:Static app:DesignTokens.RowGap}" />
-        <TextBox Text="{Binding CitiesText, UpdateSourceTrigger=PropertyChanged}"
-                 AcceptsReturn="True"
-                 TextWrapping="NoWrap"
-                 VerticalScrollBarVisibility="Auto"
-                 FontFamily="{x:Static app:DesignTokens.MonospaceFontFamily}"
-                 Height="{x:Static app:DesignTokens.CitiesEditorHeight}"
-                 VerticalContentAlignment="Top"
-                 Margin="{x:Static app:DesignTokens.RowGap}"
-                 AutomationProperties.Name="Cities to search" />
+        <!-- Locations: the checked datacenters in the order to try, side by side with every datacenter to add
+             from. Both columns have the same rows, a heading, a search box, a list and a line below, so they line up. -->
+        <Border Style="{StaticResource SettingsGroup}">
+            <StackPanel>
+                <TextBlock Text="Locations, in the order to try" Style="{StaticResource HeadingText}" />
+                <TextBlock Text="Use the arrows to reorder. Uncheck one to stop trying it."
+                           Style="{StaticResource CaptionText}"
+                           Margin="{x:Static app:DesignTokens.RowGap}" />
+                <Grid Height="{x:Static app:DesignTokens.LocationListsHeight}" Margin="{x:Static app:DesignTokens.RowGap}">
+                    <ProgressBar IsIndeterminate="True"
+                                 Width="{x:Static app:DesignTokens.BusyIndicatorWidth}"
+                                 VerticalAlignment="Center"
+                                 Visibility="{Binding IsLoadingLocations, Converter={StaticResource VisibleWhenTrue}}" />
+                    <Grid Visibility="{Binding HasLocations, Converter={StaticResource VisibleWhenTrue}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="{x:Static app:DesignTokens.ColumnGap}" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
 
-        <TextBlock Text="Protocols, in the order to try"
-                   Style="{StaticResource HeadingText}"
-                   Margin="{x:Static app:DesignTokens.SectionGap}" />
-        <TextBlock Text="Tried in exactly this order. Use the arrows to reorder; unchecked protocols are never tried."
-                   Style="{StaticResource CaptionText}"
-                   Margin="{x:Static app:DesignTokens.RowGap}" />
-        <Border Margin="{x:Static app:DesignTokens.RowGap}"
-                BorderThickness="{x:Static app:DesignTokens.HairlineThickness}"
-                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                Background="{DynamicResource ControlFillColorDefaultBrush}"
-                CornerRadius="{x:Static app:DesignTokens.ControlCornerRadius}"
-                Padding="{x:Static app:DesignTokens.CompactRowPadding}">
-            <ItemsControl ItemsSource="{Binding ProtocolRows}" AutomationProperties.Name="Protocols, in the order to try">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <!-- Segoe Fluent Icons ships with Windows 11; Segoe MDL2 Assets has the same glyphs on Windows 10. -->
-                        <DockPanel Margin="{x:Static app:DesignTokens.ProtocolRowMargin}">
-                            <Button DockPanel.Dock="Right"
-                                    Content="&#xE70D;"
-                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                    Width="{x:Static app:DesignTokens.ReorderButtonWidth}"
-                                    Margin="{x:Static app:DesignTokens.InlineGap}"
-                                    Tag="{Binding}"
-                                    ToolTip="{x:Static app:ToolTipText.MoveProtocolDown}"
-                                    AutomationProperties.Name="{Binding Name, StringFormat=Move {0} down}"
-                                    Click="OnMoveDownClick" />
-                            <Button DockPanel.Dock="Right"
-                                    Content="&#xE70E;"
-                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                    Width="{x:Static app:DesignTokens.ReorderButtonWidth}"
-                                    Tag="{Binding}"
-                                    ToolTip="{x:Static app:ToolTipText.MoveProtocolUp}"
-                                    AutomationProperties.Name="{Binding Name, StringFormat=Move {0} up}"
-                                    Click="OnMoveUpClick" />
-                            <CheckBox Content="{Binding Name}" IsChecked="{Binding Enabled}" VerticalAlignment="Center" />
+                        <!-- Your order. -->
+                        <DockPanel Grid.Column="0">
+                            <DockPanel DockPanel.Dock="Top">
+                                <TextBlock DockPanel.Dock="Right" Style="{StaticResource LinkText}">
+                                    <Hyperlink Click="OnDeselectShownOrderClick" AutomationProperties.Name="Deselect all in your order">Deselect all</Hyperlink>
+                                </TextBlock>
+                                <TextBlock Text="Your order" Style="{StaticResource ColumnHeadingText}" />
+                            </DockPanel>
+                            <Grid DockPanel.Dock="Top" Margin="{x:Static app:DesignTokens.RowGap}">
+                                <TextBox Text="{Binding OrderSearchText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Search your order" />
+                                <TextBlock Text="Search your order"
+                                           Style="{StaticResource SearchHint}"
+                                           Visibility="{Binding OrderSearchText, Converter={StaticResource VisibleWhenEmpty}}" />
+                            </Grid>
+                            <CheckBox x:Name="RankBySuccessCheckBox"
+                                      DockPanel.Dock="Bottom"
+                                      Content="Rank by recent success"
+                                      IsChecked="{Binding RankBySuccess}"
+                                      ToolTip="{x:Static app:ToolTipText.RankBySuccess}"
+                                      Margin="{x:Static app:DesignTokens.RowGap}" />
+                            <Border Style="{StaticResource ListFrame}" Margin="{x:Static app:DesignTokens.RowGap}">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                    <ItemsControl ItemsSource="{Binding OrderRows}" AutomationProperties.Name="Your order" Margin="{x:Static app:DesignTokens.ScrollBarGutter}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <DockPanel Margin="{x:Static app:DesignTokens.ProtocolRowMargin}">
+                                                    <!-- The arrows are off while the order is filtered. -->
+                                                    <Button DockPanel.Dock="Right"
+                                                            Content="&#xE70D;"
+                                                            Style="{StaticResource SmallArrowButton}"
+                                                            IsEnabled="{Binding CanMove}"
+                                                            Tag="{Binding}"
+                                                            ToolTip="{x:Static app:ToolTipText.MoveLocationDown}"
+                                                            AutomationProperties.Name="{Binding Title, StringFormat=Move {0} down}"
+                                                            Click="OnMoveLocationDownClick" />
+                                                    <Button DockPanel.Dock="Right"
+                                                            Content="&#xE70E;"
+                                                            Style="{StaticResource SmallArrowButton}"
+                                                            IsEnabled="{Binding CanMove}"
+                                                            Tag="{Binding}"
+                                                            ToolTip="{x:Static app:ToolTipText.MoveLocationUp}"
+                                                            AutomationProperties.Name="{Binding Title, StringFormat=Move {0} up}"
+                                                            Click="OnMoveLocationUpClick" />
+                                                    <CheckBox IsChecked="{Binding IsChecked}" VerticalAlignment="Center" AutomationProperties.Name="{Binding Title}">
+                                                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                                    </CheckBox>
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Border>
                         </DockPanel>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+
+                        <!-- Add locations. -->
+                        <DockPanel Grid.Column="2">
+                            <DockPanel DockPanel.Dock="Top">
+                                <TextBlock DockPanel.Dock="Right" Style="{StaticResource LinkText}">
+                                    <Hyperlink Click="OnDeselectShownCatalogClick" AutomationProperties.Name="Deselect all shown locations">Deselect all</Hyperlink>
+                                </TextBlock>
+                                <TextBlock DockPanel.Dock="Right" Style="{StaticResource LinkText}">
+                                    <Hyperlink Click="OnSelectShownCatalogClick" AutomationProperties.Name="Select all shown locations">Select all</Hyperlink>
+                                </TextBlock>
+                                <TextBlock Text="Add locations" Style="{StaticResource ColumnHeadingText}" />
+                            </DockPanel>
+                            <Grid DockPanel.Dock="Top" Margin="{x:Static app:DesignTokens.RowGap}">
+                                <TextBox Text="{Binding CatalogSearchText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Search cities, nicknames or regions" />
+                                <TextBlock Text="Search cities, nicknames or regions"
+                                           Style="{StaticResource SearchHint}"
+                                           Visibility="{Binding CatalogSearchText, Converter={StaticResource VisibleWhenEmpty}}" />
+                            </Grid>
+                            <!-- Fills the line the ranking switch takes in the other column, so both lists end together. -->
+                            <TextBlock DockPanel.Dock="Bottom"
+                                       Text="{Binding CheckedCountText}"
+                                       Style="{StaticResource CaptionText}"
+                                       VerticalAlignment="Center"
+                                       Height="{Binding ActualHeight, ElementName=RankBySuccessCheckBox}"
+                                       Margin="{x:Static app:DesignTokens.RowGap}" />
+                            <Border Style="{StaticResource ListFrame}" Margin="{x:Static app:DesignTokens.RowGap}">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                    <ItemsControl ItemsSource="{Binding CatalogGroups}" AutomationProperties.Name="Every location" Margin="{x:Static app:DesignTokens.ScrollBarGutter}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="{x:Static app:DesignTokens.ProtocolRowMargin}">
+                                                    <DockPanel>
+                                                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource LinkText}">
+                                                            <Hyperlink Tag="{Binding}" Click="OnToggleRegionClick">
+                                                                <Run Text="{Binding LinkTitle, Mode=OneWay}" />
+                                                            </Hyperlink>
+                                                        </TextBlock>
+                                                        <TextBlock Text="{Binding Name}" Style="{StaticResource ColumnHeadingText}" />
+                                                    </DockPanel>
+                                                    <ItemsControl ItemsSource="{Binding Rows}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <CheckBox IsChecked="{Binding IsChecked}" AutomationProperties.Name="{Binding Title}">
+                                                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                                                </CheckBox>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Border>
+                        </DockPanel>
+                    </Grid>
+                </Grid>
+                <TextBlock Text="{Binding LocationsProblem}"
+                           Style="{StaticResource ErrorText}"
+                           Margin="{x:Static app:DesignTokens.RowGap}"
+                           Visibility="{Binding LocationsProblem, Converter={StaticResource VisibleWhenPresent}}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Protocols. -->
+        <Border Style="{StaticResource SettingsGroup}" Margin="{x:Static app:DesignTokens.SectionGap}">
+            <StackPanel>
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Right" Style="{StaticResource LinkText}">
+                        <Hyperlink Click="OnDeselectAllProtocolsClick" AutomationProperties.Name="Deselect all protocols">Deselect all</Hyperlink>
+                    </TextBlock>
+                    <TextBlock DockPanel.Dock="Right" Style="{StaticResource LinkText}">
+                        <Hyperlink Click="OnSelectAllProtocolsClick" AutomationProperties.Name="Select all protocols">Select all</Hyperlink>
+                    </TextBlock>
+                    <TextBlock Text="Protocols, in the order to try" Style="{StaticResource HeadingText}" />
+                </DockPanel>
+                <TextBlock Text="Tried in exactly this order. Use the arrows to reorder; unchecked protocols are never tried."
+                           Style="{StaticResource CaptionText}"
+                           Margin="{x:Static app:DesignTokens.RowGap}" />
+                <Border Style="{StaticResource ListFrame}" Margin="{x:Static app:DesignTokens.RowGap}">
+                    <ItemsControl ItemsSource="{Binding ProtocolRows}" AutomationProperties.Name="Protocols, in the order to try">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!-- Segoe Fluent Icons ships with Windows 11; Segoe MDL2 Assets has the same glyphs on Windows 10. -->
+                                <DockPanel Margin="{x:Static app:DesignTokens.ProtocolRowMargin}">
+                                    <Button DockPanel.Dock="Right"
+                                            Content="&#xE70D;"
+                                            FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                            Width="{x:Static app:DesignTokens.ReorderButtonWidth}"
+                                            Margin="{x:Static app:DesignTokens.InlineGap}"
+                                            Tag="{Binding}"
+                                            ToolTip="{x:Static app:ToolTipText.MoveProtocolDown}"
+                                            AutomationProperties.Name="{Binding Name, StringFormat=Move {0} down}"
+                                            Click="OnMoveProtocolDownClick" />
+                                    <Button DockPanel.Dock="Right"
+                                            Content="&#xE70E;"
+                                            FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                            Width="{x:Static app:DesignTokens.ReorderButtonWidth}"
+                                            Tag="{Binding}"
+                                            ToolTip="{x:Static app:ToolTipText.MoveProtocolUp}"
+                                            AutomationProperties.Name="{Binding Name, StringFormat=Move {0} up}"
+                                            Click="OnMoveProtocolUpClick" />
+                                    <CheckBox Content="{Binding Name}" IsChecked="{Binding Enabled}" VerticalAlignment="Center" />
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+            </StackPanel>
         </Border>
 
         <DockPanel Margin="{x:Static app:DesignTokens.SectionGap}">

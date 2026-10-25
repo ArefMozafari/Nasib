@@ -61,6 +61,12 @@
 
             <TextBlock Style="{StaticResource ErrorText}"
                        Margin="{x:Static app:DesignTokens.RowGap}"
+                       Visibility="{Binding EngineMissing, Converter={StaticResource VisibleWhenTrue}}">
+                <Run Text="The engine is missing. Keep nasib-engine.exe in the same folder as Nasib.exe:" />
+                <Run Text="{Binding EnginePath, Mode=OneWay}" />
+            </TextBlock>
+            <TextBlock Style="{StaticResource ErrorText}"
+                       Margin="{x:Static app:DesignTokens.RowGap}"
                        Visibility="{Binding CliMissing, Converter={StaticResource VisibleWhenTrue}}">
                 <Run Text="Windscribe is not installed, or its command-line tool is missing from" />
                 <Run Text="{Binding CliPath, Mode=OneWay}" />
@@ -119,37 +125,52 @@
                     <ItemsControl ItemsSource="{Binding RecentLines}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <!-- Colored by what the line reports; only "nothing worked" uses the error color. -->
-                                <TextBlock Text="{Binding Text}"
-                                           FontFamily="{x:Static app:DesignTokens.MonospaceFontFamily}"
-                                           FontSize="{x:Static app:DesignTokens.LogFontSize}"
-                                           TextWrapping="Wrap">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                <!-- Colored by what the line reports; only "nothing worked" and a missing CLI use the error color.
+                                     Every other line has a background stripe, counted from the first line shown, so it doesn't flip. -->
+                                <Border Padding="{x:Static app:DesignTokens.LogLinePadding}">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Kind}" Value="{x:Static app:OutputKind.Trying}">
-                                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Kind}" Value="{x:Static app:OutputKind.Connected}">
-                                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Kind}" Value="{x:Static app:OutputKind.Failed}">
-                                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Kind}" Value="{x:Static app:OutputKind.TunnelDown}">
-                                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Kind}" Value="{x:Static app:OutputKind.NothingWorked}">
-                                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Kind}" Value="{x:Static app:OutputKind.Stopped}">
-                                                    <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                                <DataTrigger Binding="{Binding IsStriped}" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
+                                    </Border.Style>
+                                    <TextBlock Text="{Binding Text}"
+                                               FontFamily="{x:Static app:DesignTokens.MonospaceFontFamily}"
+                                               FontSize="{x:Static app:DesignTokens.LogFontSize}"
+                                               TextWrapping="Wrap">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Tone}" Value="{x:Static app:OutputTone.Primary}">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Tone}" Value="{x:Static app:OutputTone.Success}">
+                                                        <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Tone}" Value="{x:Static app:OutputTone.Muted}">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Tone}" Value="{x:Static app:OutputTone.Warning}">
+                                                        <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Tone}" Value="{x:Static app:OutputTone.Error}">
+                                                        <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Tone}" Value="{x:Static app:OutputTone.Accent}">
+                                                        <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Tone}" Value="{x:Static app:OutputTone.Phase}">
+                                                        <Setter Property="Foreground" Value="{x:Static app:DesignTokens.PhaseBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

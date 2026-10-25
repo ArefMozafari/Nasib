@@ -13,11 +13,11 @@
             <TabItem Header="Settings" />
         </TabControl>
 
-        <!-- Both panels share one cell and the hidden one keeps its space, so the window takes the taller tab's
-             height and does not jump when switching. Both start at the top; the Status tab's output pane fills the rest. -->
+        <!-- Only the chosen tab takes space, and the window takes its height and width: Settings is wider, so the
+             two location lists sit side by side. -->
         <Grid Margin="{x:Static app:DesignTokens.SectionGap}">
             <app:StatusPanel x:Name="StatusPanel" />
-            <app:SettingsPanel x:Name="SettingsPanel" VerticalAlignment="Top" Visibility="Hidden" />
+            <app:SettingsPanel x:Name="SettingsPanel" VerticalAlignment="Top" Visibility="Collapsed" />
         </Grid>
     </StackPanel>
 </Window>

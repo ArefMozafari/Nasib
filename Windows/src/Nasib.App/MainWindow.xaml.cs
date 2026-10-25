@@ -56,7 +56,8 @@ public partial class MainWindow : Window
             return;
         }
         var statusSelected = Tabs.SelectedIndex == StatusTabIndex;
-        StatusPanel.Visibility = statusSelected ? Visibility.Visible : Visibility.Hidden;
-        SettingsPanel.Visibility = statusSelected ? Visibility.Hidden : Visibility.Visible;
+        StatusPanel.Visibility = statusSelected ? Visibility.Visible : Visibility.Collapsed;
+        SettingsPanel.Visibility = statusSelected ? Visibility.Collapsed : Visibility.Visible;
+        Width = statusSelected ? DesignTokens.WindowWidth : DesignTokens.SettingsWindowWidth;
     }
 }

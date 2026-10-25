@@ -30,16 +30,15 @@ one by one in the Windscribe app takes longer than the connection lasts.
 
 ## How it decides
 
-1. **Knows every Windscribe datacenter.** On macOS, Nasib bundles all of them (about 200) and adds
-   whatever Windscribe's own log shows, so a new server turns up once Windscribe has touched it. You
-   choose which ones to search, in your order. The Windows app still searches by city, from a bundled
-   list of 20.
+1. **Knows every Windscribe datacenter.** Nasib bundles all of them (about 200) and adds whatever
+   Windscribe's own log shows, so a new server turns up once Windscribe has touched it. You choose
+   which ones to search, in your order.
 2. **Tries the last pair that worked first**, on the port it worked on.
 3. **Knocks on every address at once** and drops the ones that don't answer at all. That takes about
    two seconds and usually rules out half the list.
 4. **Tries each protocol in the order you set**, on your locations in your order. With "Rank by recent
    success" on, the locations that worked best over the last 300 attempts go first.
-5. **Tries other ports when the usual ones fail** (macOS). The first pass uses each protocol's default
+5. **Tries other ports when the usual ones fail.** The first pass uses each protocol's default
    port, or a port that has worked better here. Only when nothing works does a second pass try the
    protocol's other ports. Ports that worked come first, then ports not tried yet, then ports that
    only failed.
@@ -47,7 +46,7 @@ one by one in the Windscribe app takes longer than the connection lasts.
 7. **Counts a connection only when a blocked site loads through it.** Windscribe reporting
    "Connected" isn't enough; on a filtered network that often happens with nothing getting through.
 
-The output pane shows each stage of a search as it starts, and the port of every attempt (macOS).
+The output pane shows each stage of a search as it starts, and the port of every attempt.
 
 ## Install
 
@@ -78,8 +77,9 @@ The output pane shows each stage of a search as it starts, and the port of every
   command-line tool, `C:\Program Files\Windscribe\windscribe-cli.exe`. The .NET runtime is inside
   the executable, so nothing else needs installing.
 - **Install:** download `Nasib-<version>-win-x64.zip` from the
-  [latest release](https://github.com/ArefMozafari/Nasib/releases/latest), unzip it, and put
-  `Nasib.exe` in a folder where it will stay, such as `%LOCALAPPDATA%\Programs\Nasib`.
+  [latest release](https://github.com/ArefMozafari/Nasib/releases/latest), unzip it, and keep
+  `Nasib.exe` and `nasib-engine.exe` together in a folder where they will stay, such as
+  `%LOCALAPPDATA%\Programs\Nasib`. Nasib runs the engine from its own folder.
 - **First launch:** the build isn't signed, so SmartScreen warns. Choose More info, then Run anyway.
 - **Tray icon:** Nasib opens its window on launch, then lives in the notification area. Windows 11
   hides new icons in the overflow; to keep the waves on the taskbar, turn Nasib on under Settings →
@@ -88,7 +88,7 @@ The output pane shows each stage of a search as it starts, and the port of every
   `Nasib.exe` was when you turned it on.
 
 <p align="center">
-  <img src="docs/images/windows-settings.png" width="320" alt="Windows Settings tab: cities to search, and protocols in the order to try with arrows to reorder them">
+  <img src="docs/images/windows-settings.png" width="320" alt="Windows Settings tab: your locations in order beside every datacenter grouped by region, and protocols in the order to try">
   <img src="docs/images/windows-tray-menu.png" width="166" alt="Windows tray menu: Nasib, the status line, Open Nasib, Find Now, About Nasib and Quit Nasib">
 </p>
 
@@ -112,21 +112,21 @@ The output pane shows each stage of a search as it starts, and the port of every
 - **Find Now** runs one search and stops at the first pair that works. While it runs, it reads
   **Stop**, which ends the search and disconnects.
 - **Start Survey** tries every location on every protocol and records each result, without stopping
-  at a success. On macOS it covers every port too. It's slow, and it's how the rankings get refreshed.
+  at a success. It covers every port too. It's slow, and it's how the rankings get refreshed.
   **Stop Survey** ends it and puts you back on the last pair that worked.
 - **Auto-reconnect** reads the tunnel status every 3 seconds and checks a blocked site once a minute,
   and searches when either fails.
 - **Settings** holds the locations to search and the protocols to try, each in your order.
-  - **macOS:** your locations are a list you check and drag into order. Add more from every Windscribe
-    datacenter, grouped by region. Both lists have a search field, and Select all and Deselect all act on
-    what the search shows, or on one region. "Rank by recent success" reorders them by what worked
-    lately; turn it off to follow your order exactly. Cities saved by an older version carry over as the
-    same locations. Settings won't save with no location or no protocol checked.
-  - **Windows:** cities to search, one per line, as Windscribe spells them; empty means every city.
+  - Your locations are a list you check and put in order: drag them on macOS, use the arrows on Windows.
+    Add more from every Windscribe datacenter, grouped by region. Both lists have a search field, and
+    Select all and Deselect all act on what the search shows, or on one region. "Rank by recent success"
+    reorders them by what worked lately; turn it off to follow your order exactly. Cities saved by an
+    older version carry over as the same locations. Settings won't save with no location or no protocol
+    checked.
 
 **What it tells you**
 - The output pane colors each line: green when it connects, gray for a failed attempt, orange when
-  the tunnel drops, and red only when nothing works. On macOS, teal lines mark each stage of a search.
+  the tunnel drops, and red only when nothing works. Teal lines mark each stage of a search.
 - Notifications come when it connects, when the tunnel drops, and when nothing works.
 - **Updates:** Nasib asks GitHub for the latest release at launch and once a day. When there's a
   newer one, you get an **Update to** button next to the app name, the same item in the menu, and one
@@ -137,8 +137,8 @@ The output pane shows each stage of a search as it starts, and the port of every
 
 | File | What's in it |
 |---|---|
-| `log.csv` | Every attempt: time, datacenter, protocol, `ok` or `fail`, and on macOS the port |
-| `last_good` | The last datacenter and protocol that worked, and on macOS its port |
+| `log.csv` | Every attempt: time, datacenter, protocol, `ok` or `fail`, and the port |
+| `last_good` | The last datacenter, protocol and port that worked |
 | `config.json` | What you saved in Settings. Older macOS versions kept it in `config`, which is converted once and removed. |
 | `preferences.json` (Windows) | Whether auto-reconnect is on, and the last update you were told about |
 
@@ -146,8 +146,8 @@ The output pane shows each stage of a search as it starts, and the port of every
 
 ### Engine
 
-`Engine/` holds `nasib-engine`, the Rust program that does the searching. The macOS app runs it, and
-the Windows app will too. You need the Rust toolchain. From the repository root:
+`Engine/` holds `nasib-engine`, the Rust program that does the searching. Both apps run it. You need
+the Rust toolchain. From the repository root:
 
 ```bash
 cd Engine
@@ -183,18 +183,17 @@ repository root:
 
 ### Windows
 
-Everything for Windows is under `Windows/`: a C# engine library, the WPF app, and their tests. You
-need the .NET 9 SDK. From PowerShell:
+Everything for the Windows app is under `Windows/`: the WPF app and its tests. You need the .NET 9 SDK,
+and Rust with the `x86_64-pc-windows-msvc` target, which is the default on Windows. From PowerShell:
 
 ```powershell
 ./Windows/build.ps1
 ```
 
-- `build.ps1` runs the tests, then writes `Windows/build/Nasib-<version>-win-x64.zip` with a single
-  self-contained `Nasib.exe`.
-- `dotnet test Windows/Nasib.sln` runs the tests alone.
-- The Windows app still has its own C# engine, with the same modes, timings and files as `Engine/`.
-  Its tests run it against a fake `windscribe-cli` and fake probes, so they never touch the real VPN.
+- `build.ps1` runs the engine's and the app's tests, builds the engine, then writes
+  `Windows/build/Nasib-<version>-win-x64.zip` with a self-contained `Nasib.exe` and `nasib-engine.exe`.
+- `dotnet test Windows/Nasib.sln` runs the app's tests alone. A debug build copies the engine next to
+  `Nasib.exe` once `cargo build --release --target x86_64-pc-windows-msvc` has built it in `Engine/`.
 - The tray glyph and the app icon are drawn from the same path data as the SVGs in `Design/`; the
   build writes the `.exe` icon from it with `Windows/tools/Nasib.IconBuilder`.
 
@@ -207,7 +206,7 @@ need the .NET 9 SDK. From PowerShell:
   account, a Pro-only location just fails like any other.
 - Going back to an older version drops the attempts logged with a port from its rankings, since older
   versions read only 4-column lines.
-- When nothing works, a search on macOS can take far longer than before, since it goes on to every other
+- When nothing works, a search can take far longer than before, since it goes on to every other
   port of every protocol (tcp and stealth alone have ten more each). A search where no server answers
   the first knock skips those ports, as the network is then likely down. A survey always covers them,
   so it takes several times longer than before.
