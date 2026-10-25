@@ -10,6 +10,8 @@ enum OutputTone: Equatable {
     case error
     case accent
     case detail
+    /// The header that starts each stage of a search.
+    case phase
 }
 
 /// One line of the engine's output, turned into something the UI can react to.
@@ -23,6 +25,7 @@ enum EngineEvent: Equatable {
     case searchStopped
     case tunnelDown
     case cliMissing(path: String)
+    case phase(String)
     case other(String)
 
     var tone: OutputTone {
@@ -33,6 +36,7 @@ enum EngineEvent: Equatable {
         case .tunnelDown: .warning
         case .nothingWorked, .cliMissing: .error
         case .searchStopped, .surveyStopped, .surveyFinished: .accent
+        case .phase: .phase
         case .other: .detail
         }
     }
@@ -54,6 +58,7 @@ enum EngineOutputParser {
     private static let searchStoppedLine = "search stopped"
     private static let tunnelDownLine = "tunnel down"
     private static let cliMissingPrefix = "windscribe-cli missing: "
+    private static let phasePrefix = "phase: "
     private static let pairSeparator = " / "
 
     /// Splits "Location / protocol" into its two parts.
@@ -78,6 +83,7 @@ enum EngineOutputParser {
         if line == searchStoppedLine { return .searchStopped }
         if line == tunnelDownLine { return .tunnelDown }
         if line.hasPrefix(cliMissingPrefix) { return .cliMissing(path: String(line.dropFirst(cliMissingPrefix.count))) }
+        if line.hasPrefix(phasePrefix) { return .phase(String(line.dropFirst(phasePrefix.count))) }
         return .other(line)
     }
 

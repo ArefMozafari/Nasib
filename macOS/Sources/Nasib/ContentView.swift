@@ -151,6 +151,7 @@ extension OutputTone {
         case .error: .red
         case .accent: .accentColor
         case .detail: Color(nsColor: .tertiaryLabelColor)
+        case .phase: .teal
         }
     }
 }

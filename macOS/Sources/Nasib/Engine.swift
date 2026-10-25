@@ -86,7 +86,7 @@ final class Engine: ObservableObject {
             Notifier.post(title: Self.tunnelDownNotificationTitle, body: Self.tunnelDownNotificationBody)
         case .cliMissing:
             state = .down
-        case .failed, .searchStopped, .surveyStopped, .surveyFinished, .other:
+        case .failed, .searchStopped, .surveyStopped, .surveyFinished, .phase, .other:
             break
         }
     }
