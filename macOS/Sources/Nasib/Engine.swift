@@ -37,6 +37,8 @@ final class Engine: ObservableObject {
     /// A healthy check is busy for a second or two but never searching, so the button doesn't flicker.
     @Published private(set) var isSearching = false
     @Published private(set) var recentLines: [String] = []
+    /// How many lines have scrolled out of `recentLines` since launch.
+    @Published private(set) var droppedLineCount = 0
     @Published private(set) var engineMissing = false
     @Published var autoReconnect: Bool {
         didSet { UserDefaults.standard.set(autoReconnect, forKey: Self.autoReconnectKey) }
@@ -66,8 +68,16 @@ final class Engine: ObservableObject {
     private func append(line: String) {
         recentLines.append(line)
         if recentLines.count > Self.recentLineLimit {
-            recentLines.removeFirst(recentLines.count - Self.recentLineLimit)
+            let dropped = recentLines.count - Self.recentLineLimit
+            recentLines.removeFirst(dropped)
+            droppedLineCount += dropped
         }
+    }
+
+    /// Whether the line at this position in `recentLines` gets the alternating background. It counts from
+    /// the first line ever shown, so dropping the oldest line doesn't flip every row's stripe.
+    nonisolated static func isStriped(index: Int, droppedLineCount: Int) -> Bool {
+        !(index + droppedLineCount).isMultiple(of: 2)
     }
 
     private func handle(line: String) {

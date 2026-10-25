@@ -12,6 +12,9 @@ enum Layout {
     static let padding: CGFloat = 20
     static let statusDotSize: CGFloat = 10
     static let logHeight: CGFloat = 140
+    /// Space around each log line, so its stripe reads as a row.
+    static let logLinePadding: CGFloat = 4
+    static let logLineVerticalPadding: CGFloat = 2
     static let locationListsHeight: CGFloat = 300
     /// The search field above each location list, and the line below it: the ranking switch on one side,
     /// the count on the other.
@@ -174,6 +177,15 @@ struct RecentOutput: View {
                         Text(line)
                             .font(.caption.monospaced())
                             .foregroundStyle(EngineOutputParser.parse(line: line).tone.color)
+                            .padding(.horizontal, Layout.logLinePadding)
+                            .padding(.vertical, Layout.logLineVerticalPadding)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            // macOS's own alternating row color, as in Finder lists, so light and dark mode both fit.
+                            .background(
+                                Engine.isStriped(index: index, droppedLineCount: engine.droppedLineCount)
+                                    ? Color(nsColor: NSColor.alternatingContentBackgroundColors[1])
+                                    : Color.clear
+                            )
                             .id(index)
                     }
                 }

@@ -25,4 +25,17 @@ final class EngineTests: XCTestCase {
     func testShouldPollStatusEveryThreeSeconds() {
         XCTAssertEqual(Engine.statusInterval, 3)
     }
+
+    func testShouldStripeEveryOtherLine() {
+        XCTAssertFalse(Engine.isStriped(index: 0, droppedLineCount: 0))
+        XCTAssertTrue(Engine.isStriped(index: 1, droppedLineCount: 0))
+    }
+
+    // Once the oldest line is dropped, each remaining line keeps its stripe instead of every row flipping.
+    func testShouldKeepEachLinesStripeWhenOlderLinesAreDropped() {
+        XCTAssertEqual(
+            Engine.isStriped(index: 1, droppedLineCount: 0),
+            Engine.isStriped(index: 0, droppedLineCount: 1)
+        )
+    }
 }
