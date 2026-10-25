@@ -6,13 +6,17 @@ pub const APPLICATION_ID: &str = "com.arefmozafari.nasib";
 /// The icon installed under `share/icons/hicolor`.
 pub const APP_ICON_NAME: &str = "nasib";
 
+pub mod appearance;
 pub mod controller;
 pub mod engine_catalog;
 pub mod engine_config;
 pub mod engine_process;
+pub mod launch;
 pub mod layout;
 pub mod location_selection;
+pub mod login_item;
 pub mod notifier;
 pub mod output_parser;
 pub mod preferences;
 pub mod text;
+pub mod update_checker;
