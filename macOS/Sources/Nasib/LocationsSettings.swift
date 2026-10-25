@@ -125,16 +125,21 @@ struct LocationsSettings: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Layout.rowSpacing) {
-            Text("Locations, in the order to try").font(.headline)
-            Text("Drag to reorder. Uncheck one to stop trying it.")
-                .font(.caption).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            HStack(alignment: .top, spacing: Layout.sectionSpacing) {
-                orderColumn
-                pickerColumn
+        // A group box sets the section apart from the window on the system's own background, like the
+        // Protocols section below it.
+        GroupBox {
+            VStack(alignment: .leading, spacing: Layout.rowSpacing) {
+                Text("Locations, in the order to try").font(.headline)
+                Text("Drag to reorder. Uncheck one to stop trying it.")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .top, spacing: Layout.sectionSpacing) {
+                    orderColumn
+                    pickerColumn
+                }
+                .frame(height: Layout.locationListsHeight)
             }
-            .frame(height: Layout.locationListsHeight)
+            .padding(Layout.groupPadding)
         }
     }
 }

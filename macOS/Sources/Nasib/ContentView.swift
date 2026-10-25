@@ -7,6 +7,8 @@ enum Layout {
     static let settingsWindowWidth: CGFloat = 620
     static let sectionSpacing: CGFloat = 16
     static let rowSpacing: CGFloat = 8
+    /// The space inside a Settings group box, between its edge and the section's content.
+    static let groupPadding: CGFloat = 8
     static let padding: CGFloat = 20
     static let statusDotSize: CGFloat = 10
     static let logHeight: CGFloat = 140

@@ -109,6 +109,23 @@ struct SettingsView: View {
             } else {
                 ProgressView().frame(maxWidth: .infinity, minHeight: Layout.locationListsHeight)
             }
+            GroupBox { protocolsSection.padding(Layout.groupPadding) }
+            HStack {
+                Button("Reset to Defaults") { resetToDefaults() }
+                    .help(Tooltip.resetToDefaults)
+                Spacer()
+                Button("Save") { save() }
+                    .keyboardShortcut(.defaultAction)
+                    .help(Tooltip.save)
+            }
+            if let message {
+                Text(message).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .task { await loadCatalog() }
+    }
+
+    private var protocolsSection: some View {
             VStack(alignment: .leading, spacing: Layout.rowSpacing) {
                 HStack {
                     Text("Protocols, in the order to try").font(.headline)
@@ -131,18 +148,5 @@ struct SettingsView: View {
                 }
                 .frame(height: Layout.protocolListHeight)
             }
-            HStack {
-                Button("Reset to Defaults") { resetToDefaults() }
-                    .help(Tooltip.resetToDefaults)
-                Spacer()
-                Button("Save") { save() }
-                    .keyboardShortcut(.defaultAction)
-                    .help(Tooltip.save)
-            }
-            if let message {
-                Text(message).font(.caption).foregroundStyle(.secondary)
-            }
-        }
-        .task { await loadCatalog() }
     }
 }
