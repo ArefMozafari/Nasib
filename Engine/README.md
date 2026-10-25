@@ -11,17 +11,38 @@ presses Stop. It can also be run by hand.
 
 | Invocation | What it does |
 |---|---|
-| `nasib-engine` | Searches once: the last pair that worked first, then every reachable datacenter by rank on each protocol in the configured order. Stops at the first pair that carries traffic. |
+| `nasib-engine` | Searches once and stops at the first pair that carries traffic. See "How a search runs" below. |
 | `nasib-engine --watch` | Exits at once if the tunnel is up and the blocked site loads; otherwise prints `tunnel down` and searches. |
-| `nasib-engine --survey` | Tries every pair, logs every result, never stops early, then reconnects the last pair that worked. |
+| `nasib-engine --survey` | Tries every pair on every port, logs every result, never stops early, then reconnects the last pair that worked. |
 | `nasib-engine --reach` | Prints the datacenters with at least one address answering on TCP 443. |
 | `nasib-engine --rank` | Prints the protocol order and the datacenters ordered by recent success. |
 | `nasib-engine --locations` | Prints each datacenter and its addresses. |
 | `nasib-engine --status` | Reads `windscribe-cli status` once and prints one line, without touching the tunnel. |
+| `nasib-engine --catalog` | Prints every datacenter, grouped by region, as one JSON line for the apps' Settings. Needs no `windscribe-cli`. |
 
 A pair works only when the CLI reports Connected and `https://www.youtube.com/generate_204` answers 204
 through the tunnel within 8 seconds, with any system proxy bypassed. Each attempt gets 10 seconds to
 connect and 2 more to settle.
+
+## How a search runs
+
+Each stage starts with a `phase:` line.
+
+1. **The last pair that worked**, on its port, outside a survey.
+2. **Reachability:** every address of the chosen locations is knocked on TCP 443 at once. Locations where
+   nothing answers are skipped, unless nothing answers at all.
+3. **First pass:** for each protocol in the configured order, its preferred port, on every location in
+   order. The preferred port is the one that has worked best here, or the protocol's default port, the
+   first one `windscribe-cli ports` lists. The locations keep the user's order, re-sorted by success over
+   the last 300 attempts when `rankBySuccess` is on.
+4. **Second pass**, only when the first found nothing, or in a survey: each protocol's other ports, in
+   three groups: ports that have worked here, best first; then ports never tried, in Windscribe's order;
+   then ports that only failed, least tried first. A find skips it when no address answered a knock,
+   since the network itself is likely down and every other port would fail too.
+
+The ports are read once per run, before the first attempt, since the CLI refuses a second command while
+one is running. A protocol whose ports can't be read connects without a port, and its attempts log the
+port the status then reports.
 
 ## Output contract
 
@@ -30,9 +51,10 @@ prints is detail that the apps show as it is.
 
 | Line | Meaning |
 |---|---|
-| `trying: <nickname> / <protocol>` | An attempt started. |
-| `connected: <nickname> / <protocol>` | A blocked site loaded through the tunnel. |
-| `failed: <nickname> / <protocol>` | An attempt failed. Normal while searching. |
+| `trying: <nickname> / <protocol>:<port>` | An attempt started. Without a known port, just `<protocol>`. |
+| `connected: <nickname> / <protocol>:<port>` | A blocked site loaded through the tunnel. |
+| `failed: <nickname> / <protocol>:<port>` | An attempt failed. Normal while searching. |
+| `phase: <stage>` | A stage of the search starts: `last pair that worked`, `reachability`, or `<protocol> on port <port>`. |
 | `tunnel down` | `--watch` found the tunnel not working and is searching. |
 | `nothing worked` | Every pair failed. |
 | `search stopped` | A find or watch was stopped; the tunnel is left down. |
@@ -41,7 +63,8 @@ prints is detail that the apps show as it is.
 | `search already running` | Another run holds the lock; this one did nothing. |
 | `connected: <location> / <protocol>` | From `--status`: the CLI's own location and protocol, such as `Atlanta - Magic City / IKEv2`. |
 | `down` | From `--status`: anything other than a fully connected tunnel. |
-| `windscribe-cli missing: <path>` | The Windscribe CLI isn't installed where expected. Every mode checks this first. |
+| `windscribe-cli missing: <path>` | The Windscribe CLI isn't installed where expected. Every mode but `--catalog` checks this first. |
+| `{"regions":[{"name":…,"datacenters":[{"city":…,"nickname":…,"logged":true}]}]}` | From `--catalog`: regions in the bundled order; datacenters only the Windscribe log knows come last, under `Other`. `logged` appears, as `true`, on every datacenter the Windscribe log names. |
 
 ## Stopping
 
@@ -66,7 +89,7 @@ nothing reads the output any more.
 | Code | Meaning |
 |---|---|
 | 0 | A pair works, a watch found the tunnel healthy, a listing was printed, or another run was already going |
-| 1 | Nothing worked, or no datacenter matched the configured cities |
+| 1 | Nothing worked, or no datacenter matched the locations in Settings |
 | 2 | `windscribe-cli` is missing |
 | 64 | Unknown arguments |
 | 130 | Stopped |
@@ -85,13 +108,39 @@ The state folder holds:
 
 | File | What's in it |
 |---|---|
-| `log.csv` | Every attempt: `YYYY-MM-DDTHH:MM:SS,<nickname>,<protocol>,ok` or `fail`, in local time |
-| `last_good` | The last pair that worked, as `<nickname>\|<protocol>` |
-| `config.json` | `{ "cities": [...], "protocolOrder": [...] }`, written by the app's Settings. An empty city list means every city. |
+| `log.csv` | Every attempt: `YYYY-MM-DDTHH:MM:SS,<nickname>,<protocol>,ok\|fail,<port>`, in local time. Lines from before ports were recorded have no fifth column and count as the protocol's default port. |
+| `last_good` | The last pair that worked, as `<nickname>\|<protocol>:<port>`. An older `<nickname>\|<protocol>` is still read. |
+| `config.json` | Written by the app's Settings; see below. |
 | `lock` | Held while a find, watch or survey runs |
 
-Datacenters come from a bundled list (`src/seed_datacenters.json`) merged with every datacenter in
-Windscribe's client log, so new or moved servers show up without an update.
+`config.json`:
+
+```json
+{
+  "locations": ["The 6", "Khalifa"],
+  "rankBySuccess": true,
+  "protocolOrder": ["tcp", "ikev2"],
+  "cities": ["Toronto", "Dubai"]
+}
+```
+
+- `locations`: the datacenters to search, by nickname, in order. An empty list means every datacenter.
+- `rankBySuccess`: re-sorts the locations by recent success. It's `true` when missing.
+- `cities`: what older versions saved. When `locations` is missing, as it is for an untouched install,
+  the engine searches the default locations in these cities, then every other datacenter the Windscribe
+  log names in them. That is exactly what it searched before every datacenter was bundled.
+- The default locations are the 20 datacenters of the old bundled list.
+
+Datacenters come from a bundled list of every Windscribe datacenter (`src/datacenters.json`) merged with
+Windscribe's client log, so a server added after the last refresh shows up once Windscribe has touched
+it. `tools/update-datacenters` regenerates the list from Windscribe's public server list:
+
+```bash
+python3 -I Engine/tools/update-datacenters
+```
+
+It's run by hand before a release, and its diff is reviewed like any other change. The engine itself
+never fetches the list.
 
 ## Building and testing
 
