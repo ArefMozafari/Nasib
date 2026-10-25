@@ -9,6 +9,7 @@ pub mod configuration;
 pub mod datacenter;
 pub mod events;
 pub mod finder;
+pub mod mode;
 pub mod paths;
 pub mod ranking;
 pub mod reachability;

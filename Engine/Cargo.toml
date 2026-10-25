@@ -10,6 +10,10 @@ publish = false
 name = "nasib_engine"
 path = "src/lib.rs"
 
+[[bin]]
+name = "nasib-engine"
+path = "src/main.rs"
+
 [dependencies]
 chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 ctrlc = { version = "3.5.2", features = ["termination"] }
