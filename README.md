@@ -235,8 +235,22 @@ repository root:
   bash and Docker.
 - `./Linux/build.sh release` runs them for x64, then writes `Nasib-<version>-linux-x64.deb`, `.rpm`
   and `.tar.gz` into `Linux/build/`.
-- The app icon is `Design/AppIcon.svg`; the tray glyphs are the `Design/` menu bar SVGs, recolored as
-  symbolic icons when packaging.
+- The app icon is `Design/AppIcon.svg`; the tray glyphs are the `Design/` menu bar SVGs, recolored
+  gray when packaging so they read on light and dark panels.
+
+### Releases
+
+`.github/workflows/release.yml` builds every download on GitHub's own machines.
+
+1. Set the same version in `macOS/Packaging/Info.plist`, `Windows/Directory.Build.props` and
+   `Linux/Cargo.toml`, and write the release notes in `docs/releases/<version>.md`.
+2. Push a tag named after the version, such as `v1.0.0`.
+3. The workflow checks that the versions and the tag agree, builds the macOS zip, the Windows zip and
+   the Linux packages in parallel, and drafts a release with all of them and their SHA-256 checksums
+   added to the notes.
+4. Review the draft on GitHub and publish it.
+
+A pull request that changes the workflow builds all three without drafting anything.
 
 ## Known limits
 
