@@ -30,17 +30,24 @@ one by one in the Windscribe app takes longer than the connection lasts.
 
 ## How it decides
 
-1. **Reads the datacenters from Windscribe's own log**, so new, moved or retired servers show up
-   without an update. Only the cities you list are used. Nasib starts from a bundled list and the log
-   adds to it, since Windscribe on Windows logs a datacenter only once it connects to it.
-2. **Knocks on every address at once** and drops the ones that don't answer at all. That takes about
+1. **Knows every Windscribe datacenter.** On macOS, Nasib bundles all of them (about 200) and adds
+   whatever Windscribe's own log shows, so a new server turns up once Windscribe has touched it. You
+   choose which ones to search, in your order. The Windows app still searches by city, from a bundled
+   list of 20.
+2. **Tries the last pair that worked first**, on the port it worked on.
+3. **Knocks on every address at once** and drops the ones that don't answer at all. That takes about
    two seconds and usually rules out half the list.
-3. **Ranks the datacenters by recent success** over the last 300 attempts, and tries protocols
-   strictly in the order you set in Settings. The last pair that worked always goes first. The
-   output pane says which order came from where.
-4. **Gives each attempt 10 seconds**, not the 40-odd the Windscribe CLI waits on its own.
-5. **Counts a connection only when a blocked site loads through it.** Windscribe reporting
+4. **Tries each protocol in the order you set**, on your locations in your order. With "Rank by recent
+   success" on, the locations that worked best over the last 300 attempts go first.
+5. **Tries other ports when the usual ones fail** (macOS). The first pass uses each protocol's default
+   port, or a port that has worked better here. Only when nothing works does a second pass try the
+   protocol's other ports. Ports that worked come first, then ports not tried yet, then ports that
+   only failed.
+6. **Gives each attempt 10 seconds**, not the 40-odd the Windscribe CLI waits on its own.
+7. **Counts a connection only when a blocked site loads through it.** Windscribe reporting
    "Connected" isn't enough; on a filtered network that often happens with nothing getting through.
+
+The output pane shows each stage of a search as it starts, and the port of every attempt (macOS).
 
 ## Install
 
@@ -104,17 +111,22 @@ one by one in the Windscribe app takes longer than the connection lasts.
 **The controls** (hover over any of them for a one-line explanation)
 - **Find Now** runs one search and stops at the first pair that works. While it runs, it reads
   **Stop**, which ends the search and disconnects.
-- **Start Survey** tries every datacenter on every protocol and records each result, without
-  stopping at a success. It's slow, and it's how the rankings get refreshed. **Stop Survey** ends it
-  and puts you back on the last pair that worked.
+- **Start Survey** tries every location on every protocol and records each result, without stopping
+  at a success. On macOS it covers every port too. It's slow, and it's how the rankings get refreshed.
+  **Stop Survey** ends it and puts you back on the last pair that worked.
 - **Auto-reconnect** reads the tunnel status every 3 seconds and checks a blocked site once a minute,
   and searches when either fails.
-- **Settings** holds the cities to search (one per line, as Windscribe spells them; empty means every
-  city) and the protocols to try, in exactly that order.
+- **Settings** holds the locations to search and the protocols to try, each in your order.
+  - **macOS:** your locations are a list you check and drag into order. Add more from every Windscribe
+    datacenter, grouped by region. Both lists have a search field, and Select all and Deselect all act on
+    what the search shows, or on one region. "Rank by recent success" reorders them by what worked
+    lately; turn it off to follow your order exactly. Cities saved by an older version carry over as the
+    same locations. Settings won't save with no location or no protocol checked.
+  - **Windows:** cities to search, one per line, as Windscribe spells them; empty means every city.
 
 **What it tells you**
 - The output pane colors each line: green when it connects, gray for a failed attempt, orange when
-  the tunnel drops, and red only when nothing works.
+  the tunnel drops, and red only when nothing works. On macOS, teal lines mark each stage of a search.
 - Notifications come when it connects, when the tunnel drops, and when nothing works.
 - **Updates:** Nasib asks GitHub for the latest release at launch and once a day. When there's a
   newer one, you get an **Update to** button next to the app name, the same item in the menu, and one
@@ -125,8 +137,8 @@ one by one in the Windscribe app takes longer than the connection lasts.
 
 | File | What's in it |
 |---|---|
-| `log.csv` | Every attempt: time, datacenter, protocol, `ok` or `fail` |
-| `last_good` | The last datacenter and protocol that worked |
+| `log.csv` | Every attempt: time, datacenter, protocol, `ok` or `fail`, and on macOS the port |
+| `last_good` | The last datacenter and protocol that worked, and on macOS its port |
 | `config.json` | What you saved in Settings. Older macOS versions kept it in `config`, which is converted once and removed. |
 | `preferences.json` (Windows) | Whether auto-reconnect is on, and the last update you were told about |
 
@@ -191,6 +203,14 @@ need the .NET 9 SDK. From PowerShell:
 - Another VPN running a system-wide tunnel, such as v2rayN in TUN mode, can fool the blocked-site
   check and keeps auto-reconnect searching underneath it. Tracked in
   [#4](https://github.com/ArefMozafari/Nasib/issues/4).
+- Nasib can't tell which datacenters need a Pro account; Windscribe's public list doesn't say. On a free
+  account, a Pro-only location just fails like any other.
+- Going back to an older version drops the attempts logged with a port from its rankings, since older
+  versions read only 4-column lines.
+- When nothing works, a search on macOS can take far longer than before, since it goes on to every other
+  port of every protocol (tcp and stealth alone have ten more each). A search where no server answers
+  the first knock skips those ports, as the network is then likely down. A survey always covers them,
+  so it takes several times longer than before.
 - macOS builds are signed ad hoc, not notarized. Windows builds aren't signed.
 - The Windows build is x64 only.
 
