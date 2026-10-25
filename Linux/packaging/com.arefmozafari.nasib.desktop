@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Nasib
+Comment=Keeps Windscribe connected from networks that block most of it.
+Exec=nasib
+Icon=nasib
+Terminal=false
+Categories=Network;
+Keywords=VPN;Windscribe;
+StartupNotify=true

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- The Linux app icon: the macOS icon's gradient and corner radius from the Windows drawing, with the same waves. -->
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2F80ED"/>
+      <stop offset="1" stop-color="#0F3F8F"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="192" fill="url(#background)"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="72" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M216 372 C 315 310, 413 310, 512 372 S 709 434, 808 372"/>
+    <path d="M216 512 C 315 450, 413 450, 512 512 S 709 574, 808 512"/>
+    <path d="M216 652 C 315 590, 413 590, 512 652 S 709 714, 808 652"/>
+  </g>
+</svg>
