@@ -51,6 +51,7 @@ final class Engine: ObservableObject {
     init() {
         autoReconnect = UserDefaults.standard.object(forKey: Self.autoReconnectKey) as? Bool ?? true
         engineMissing = Self.engineURL == nil
+        EngineConfig.migrateLegacyFileIfNeeded()
         Notifier.requestPermission()
         startTimers()
         refreshStatus()

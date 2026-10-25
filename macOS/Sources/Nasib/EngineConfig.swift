@@ -1,8 +1,8 @@
 import Foundation
 
-/// The overrides the engine script sources from ~/.ws-find/config: which cities to search and
-/// which protocols to try, in order. Rendered as zsh array assignments.
-struct EngineConfig: Equatable {
+/// Which cities to search and which protocols to try, in order, saved in ~/.ws-find/config.json for the
+/// engine to read. Every Nasib app writes the same format.
+struct EngineConfig: Equatable, Codable {
     static let allProtocols = ["wireguard", "ikev2", "tcp", "stealth", "wstunnel", "udp"]
     static let defaultCities = [
         "Istanbul", "Dubai", "Sofia", "Stockholm", "Amsterdam", "Frankfurt", "Zurich",
@@ -10,9 +10,10 @@ struct EngineConfig: Equatable {
         "Bratislava", "Helsinki", "Brussels",
     ]
     static let `default` = EngineConfig(cities: defaultCities, protocols: allProtocols)
-    static let fileURL = Engine.stateDirectory.appendingPathComponent("config")
 
-    private static let header = "# Written by Nasib from its Settings tab; the engine sources this file."
+    private static let fileName = "config.json"
+    /// The zsh-syntax file the old engine script sourced, read once to carry its settings over.
+    private static let legacyFileName = "config"
     private static let citiesKey = "CITIES"
     private static let protocolsKey = "PROTOCOL_ORDER"
     private static let singleQuote: Character = "'"
@@ -21,13 +22,21 @@ struct EngineConfig: Equatable {
     var cities: [String]
     var protocols: [String]
 
-    /// Quotes one city for zsh: single quotes, with embedded single quotes closed, escaped, reopened.
-    private static func quoted(_ value: String) -> String {
-        let escaped = value.replacingOccurrences(of: String(singleQuote), with: escapedSingleQuote)
-        return "\(singleQuote)\(escaped)\(singleQuote)"
+    private enum CodingKeys: String, CodingKey {
+        case cities
+        case protocols = "protocolOrder"
     }
 
-    /// Reads back the single-quoted items of a rendered cities array.
+    /// Keeps only protocols the engine knows, each once, in the order given.
+    private static func knownProtocols(_ protocols: [String]) -> [String] {
+        var known: [String] = []
+        for name in protocols where allProtocols.contains(name) && !known.contains(name) {
+            known.append(name)
+        }
+        return known
+    }
+
+    /// Reads back the single-quoted items of a legacy cities array.
     private static func unquotedItems(_ body: String) -> [String] {
         var items: [String] = []
         var current = ""
@@ -66,34 +75,40 @@ struct EngineConfig: Equatable {
         return nil
     }
 
-    func rendered() -> String {
-        let cityList = cities.map(Self.quoted).joined(separator: " ")
-        let protocolList = protocols.joined(separator: " ")
-        return """
-        \(Self.header)
-        \(Self.citiesKey)=(\(cityList))
-        \(Self.protocolsKey)=(\(protocolList))
-
-        """
-    }
-
-    /// Parses a rendered file; nil when either array line is missing.
-    static func parse(_ text: String) -> EngineConfig? {
+    /// Parses the legacy zsh-syntax file; nil when either array line is missing.
+    static func parseLegacy(_ text: String) -> EngineConfig? {
         guard let citiesBody = arrayBody(forKey: citiesKey, in: text),
               let protocolsBody = arrayBody(forKey: protocolsKey, in: text) else { return nil }
-        let protocols = protocolsBody.split(separator: " ").map(String.init).filter { allProtocols.contains($0) }
+        let protocols = knownProtocols(protocolsBody.split(separator: " ").map(String.init))
         return EngineConfig(cities: unquotedItems(citiesBody), protocols: protocols)
     }
 
-    static func load() -> EngineConfig {
-        guard let text = try? String(contentsOf: fileURL, encoding: .utf8), let config = parse(text) else {
+    /// Reads the saved file, or returns the defaults when it is missing or unreadable.
+    static func load(from directory: URL = Engine.stateDirectory) -> EngineConfig {
+        guard let data = try? Data(contentsOf: directory.appendingPathComponent(fileName)),
+              let stored = try? JSONDecoder().decode(EngineConfig.self, from: data) else {
             return .default
         }
-        return config
+        return EngineConfig(cities: stored.cities, protocols: knownProtocols(stored.protocols))
     }
 
-    func save() throws {
-        try FileManager.default.createDirectory(at: Engine.stateDirectory, withIntermediateDirectories: true)
-        try rendered().write(to: Self.fileURL, atomically: true, encoding: .utf8)
+    func save(to directory: URL = Engine.stateDirectory) throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
+        try encoder.encode(self).write(to: directory.appendingPathComponent(Self.fileName), options: .atomic)
+    }
+
+    /// Carries the settings saved by older versions over to config.json, once. A legacy file that can't be
+    /// read is left where it is, so nothing the user saved is lost.
+    static func migrateLegacyFileIfNeeded(in directory: URL = Engine.stateDirectory) {
+        let fileManager = FileManager.default
+        let jsonFile = directory.appendingPathComponent(fileName)
+        let legacyFile = directory.appendingPathComponent(legacyFileName)
+        guard !fileManager.fileExists(atPath: jsonFile.path),
+              let text = try? String(contentsOf: legacyFile, encoding: .utf8),
+              let config = parseLegacy(text),
+              (try? config.save(to: directory)) != nil else { return }
+        try? fileManager.removeItem(at: legacyFile)
     }
 }
